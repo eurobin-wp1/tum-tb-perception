@@ -1,0 +1,708 @@
+#!/usr/bin/env python3
+
+"""
+Estimates the 3D positions of objects from image bounding boxes (BBs) and depth data.
+"""
+
+import os
+import sys
+import time
+import copy
+import pickle
+
+import rospy
+import rospkg
+import tf2_ros
+import tf_conversions
+import numpy as np
+import pandas as pd
+import sensor_msgs.point_cloud2 as pc2
+
+from geometry_msgs.msg import Point, Pose, Quaternion, Vector3, TransformStamped
+from sensor_msgs.msg import PointCloud, PointCloud2, CameraInfo
+from visualization_msgs.msg import Marker, MarkerArray
+from eurobin_perception.msg import BoundingBoxList, ObjectList, Object
+
+from eurobin_perception.visualization import load_class_color_map
+
+# For debug visualizations:
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from eurobin_perception.utils import _arrow3D, _annotate3D, minimum_bounding_rectangle, rotation_matrix_from_vectors
+setattr(Axes3D, 'arrow3D', _arrow3D)
+setattr(Axes3D, 'annotate3D', _annotate3D)
+
+
+## ----------------------------------------------------------------------
+## ROS Callbacks and Message Initializations:
+## ----------------------------------------------------------------------
+
+current_pc2_msg_ = None
+current_detection_msg_ = None
+current_camera_info_msg_ = None
+
+def pc2_callback(msg):
+    global current_pc2_msg_ 
+    current_pc2_msg_ = msg
+
+def detection_callback(msg):
+    global current_detection_msg_ 
+    current_detection_msg_ = msg
+
+def camera_info_callback(msg):
+    global current_camera_info_msg_ 
+    current_camera_info_msg_ = msg
+
+## ----------------------------------------------------------------------
+## Functions:
+## ----------------------------------------------------------------------
+
+def get_point_cloud_segments(pointcloud2_msg, detection_result_msg, camera_info_msg, 
+                             cropped_pc_msg=None, cropped_pc_label='taskboard', 
+                             debug=False):
+    """
+    Extracts the segments of a pointcloud that correspond to each object that was
+    detected in an RGB image.
+    Returns the list of points (coordinates) that fall within the field of view
+    of each object's 2D bounding box.
+    Optionally returns the "cropped" pointcloud of a given object (label).
+
+    The function performs the following operations:
+      - Converts a PointCloud2 message to a list of 3D point coordinates.
+      - Back-projects all points onto the image plane using the camera's
+        intrinsic parameters.
+      - Checks whether each projected point falls within the boundaries of any
+        of the given bounding boxes. If it does, the point is assigned to that
+        bounding box's class/label.
+
+    Parameters
+    ----------
+    pointcloud2_msg: sensor_msgs.PointCloud2
+        PointCloud2 ROS message containing perceived point cloud
+    detection_result_msg: eurobin_perception.BoundingBoxList
+        Detection result ROS message containg list of bounding boxes
+    camera_info_msg: sensor_msgs.CameraInfo
+        Camera information ROS message
+    cropped_pc_msg: sensor_msgs.PointCloud
+        PointCloud ROS message to be populated with cropped point cloud
+    cropped_pc_label: str
+        Label of object for which to return the cropped point cloud
+    debug: bool
+        Whether to print some debugging messages
+
+    Returns
+    -------
+    object_points_dict: dict
+        Mapping between labels and lists of corresponding points (contained
+        in objects of type sensor_msgs.point_cloud2.Point).
+    cropped_pc_msg: sensor_msgs.PointCloud
+        PointCloud ROS message, populated with cropped point cloud
+    """
+
+    # Get camera parameters:
+    camera_P = camera_info_msg.P
+    f_x = camera_P[0]; f_y = camera_P[5]
+    c_x = camera_P[2]; c_y = camera_P[6]
+
+    # Extract list of point positions (x, y, z) sensor_msgs/PointCloud2 message:
+    read_points_start_time = time.time()
+    pc_point_list = pc2.read_points_list(pointcloud2_msg, skip_nans=True, field_names=("x", "y", "z"))
+    if debug:
+        print('[DEBUG] [pose_estimator] Converted PC2 msg to points list in {:.2f}s'.format(time.time() - read_points_start_time))
+    # TODO: Consider moving to ros_numpy (partial) vectorization if runtime must be improved.
+
+    # Find and store the 3D points that fall within each detection BB using the 3D-to-2D back-projection method:
+    object_points_dict = {}
+    point_iter_start_time = time.time()
+    for point in pc_point_list:
+        # Run point containment check for each BB:
+        for bbox in detection_result_msg.bounding_boxes:
+            if bbox.label not in object_points_dict.keys():
+                object_points_dict[bbox.label] = []
+
+            # Compute projection of point onto image plane:
+            # Note: point indices: {x, y, z} --> {0, 1, 2}.
+            u = f_x * (point[0] / point[2]) + c_x
+            v = f_y * (point[1] / point[2]) + c_y
+
+            # Check if projected point is within the bounds of the BB:
+            if u > bbox.xmin and u < bbox.xmax and v > bbox.ymin and v < bbox.ymax:
+                object_points_dict[bbox.label].append(point)
+
+                # Add the point to the "cropped point cloud" (visualization for debugging):
+                if cropped_pc_msg is not None and bbox.label == cropped_pc_label:
+                    cropped_pc_msg.points.append(Point(x=point[0], y=point[1], z=point[2]))
+
+    if debug:
+        print('[DEBUG] [pose_estimator] Iterated over all points for all labels in {:.2f}s'.format(time.time() - point_iter_start_time))
+
+    return object_points_dict, cropped_pc_msg
+
+def estimate_object_positions(point_lists_dict, debug=False):
+    """
+    Estimates the 3D positions of objects from lists of corresponding points.
+    By default, positions are estimated by the mean of the points.
+
+    Parameters
+    ----------
+    point_lists_dict: dict
+        Mapping between labels and lists of corresponding points (contained
+        in objects of type sensor_msgs.point_cloud2.Point).
+    debug: bool
+        Whether to print some debugging messages
+
+    Returns
+    -------
+    estimated_positions_dict: dict
+        Mapping between labels and ndarrays containing 3D position coordinates
+    """
+    estimated_positions_dict = {}
+
+    for label in point_lists_dict.keys():
+        points_array = np.stack(point_lists_dict[label])
+        estimated_positions_dict[label] = points_array.mean(axis=0)
+        if debug:
+            print('[DEBUG] Label: {}'.format(label))
+            print('[DEBUG] Points mean:', points_array.mean(axis=0))
+            print('[DEBUG] Points std:', points_array.std(axis=0))
+            print()
+
+    return estimated_positions_dict 
+
+def get_point_markers(point, frame_id, label='', color_value=(0., 0., 0.)):
+    """
+    Creates RViz position and text markers for a given 3D point.
+
+    Parameters
+    ----------
+    point: ndarray
+        3D position coordinates
+    frame_id: str
+        Name of given point's coordinate frame
+    label: str
+        Text with which the point will be labeled
+    color_value: tuple
+       (R, G, B) values for the point and text markers [0., 255.] 
+
+    Returns
+    -------
+    marker_msg: visualization_msgs.Marker 
+        Point visualization marker ROS message
+    text_marker_msg: visualization_msgs.Marker 
+        Text visualization marker ROS message
+    """
+    global object_marker_id
+
+    marker_msg = Marker()
+    marker_msg.header.frame_id = frame_id
+    marker_msg.id = object_marker_id
+    marker_msg.type = 2                                       # Sphere
+    marker_msg.action = 0                                     # Add/modify
+    marker_msg.pose = Pose(position=Point(*point), 
+                           orientation=Quaternion(0., 0., 0., 1.))
+    marker_msg.scale.x = 0.01
+    marker_msg.scale.y = 0.01
+    marker_msg.scale.z = 0.01
+    marker_msg.color.r = color_value[0] / 255.
+    marker_msg.color.g = color_value[1] / 255.
+    marker_msg.color.b = color_value[2] / 255.
+    marker_msg.color.a = 1.0
+    object_marker_id += 1
+
+    text_marker_msg = copy.deepcopy(marker_msg)
+    text_marker_msg.id = object_marker_id
+    text_marker_msg.type = 9                                  # Text-view-facing
+    text_marker_msg.text = label
+    text_marker_msg.pose.position.x = marker_msg.pose.position.x + \
+                                      (0.005 * (len(label) / 2.))
+    text_marker_msg.pose.position.y = marker_msg.pose.position.y - 0.01
+    object_marker_id += 1
+
+    return marker_msg, text_marker_msg
+
+# TODO: Consider implementing the following to improve position estimates of the taskboard:
+# TODO: most likely IQR-based outlier removal
+# def remove_outliers(points_array):
+#     """TODO
+#     """
+#     pass
+
+
+if __name__ == '__main__':
+    ## ----------------------------------------------------------------------
+    ## ROS Initializations:
+    ## ----------------------------------------------------------------------
+    rospy.init_node('pose_estimator')
+    rate = rospy.Rate(10)
+
+    package_path = rospkg.RosPack().get_path('eurobin_perception')
+
+    class_colors_file_path = rospy.get_param('~class_colors_file_path', '')
+    output_dir_path = rospy.get_param('~output_dir_path', 
+                                      os.path.join(package_path, 'output_data'))
+    taskboard_frame_name = rospy.get_param('~taskboard_frame_name', 'taskboard_frame')
+
+    pointcloud_topic = rospy.get_param('~pointcloud_topic', '/camera/depth/color/points')
+    camera_info_topic = rospy.get_param('~camera_info_topic', '/camera/color/camera_info')
+    detector_result_topic = rospy.get_param('~detector_result_topic', '/eurobin_perception/detection_result')
+    object_list_pub_topic = rospy.get_param('~object_list_pub_topic', '/eurobin_perception/object_positions')
+    object_marker_pub_topic = rospy.get_param('~object_marker_pub_topic', '/eurobin_perception/object_markers')
+    cropped_pc_pub_topic = rospy.get_param('~cropped_pc_pub_topic', '/eurobin_perception/cropped_pc')
+
+    debug = rospy.get_param('~debug', False)
+    save_output = rospy.get_param('~save_output', False)
+
+    pc2_subscriber = rospy.Subscriber(pointcloud_topic, PointCloud2, pc2_callback)
+    detector_result_subscriber = rospy.Subscriber(detector_result_topic, BoundingBoxList, detection_callback)
+    camera_info_subscriber = rospy.Subscriber(camera_info_topic, CameraInfo, camera_info_callback)
+
+    object_list_publisher = rospy.Publisher(object_list_pub_topic, ObjectList, queue_size=10)
+    object_marker_publisher = rospy.Publisher(object_marker_pub_topic, MarkerArray, queue_size=10)
+    cropped_pc_debug_publisher = rospy.Publisher(cropped_pc_pub_topic, PointCloud, queue_size=10)
+
+    tf_broadcaster = tf2_ros.TransformBroadcaster()
+
+    ## ----------------------------------------------------------------------
+    ## Estimator Execution:
+    ## ----------------------------------------------------------------------
+
+    rospy.loginfo('[pose_estimator] Waiting for first camera info message on topic: {}'.format(camera_info_topic))
+    while current_camera_info_msg_ is None:
+        rospy.sleep(0.1)
+
+        if rospy.is_shutdown():
+            rospy.loginfo('[pose_estimator] Stopping node...')
+            sys.exit()
+
+    class_colors_dict = load_class_color_map(class_colors_file_path)
+    orientation_quaternion = None
+
+    rospy.loginfo('[pose_estimator] Will estimate object poses for every message received on topic: {}'.format(detector_result_topic))
+    try:
+        while not rospy.is_shutdown():
+            if current_detection_msg_ is not None:
+                if current_pc2_msg_ is not None:
+                    rospy.loginfo('[pose_estimator] Received detection result message.')
+                    rospy.loginfo('[pose_estimator] Estimating detected object positions...')
+                    position_estimation_start_time = time.time()
+
+                    cropped_pc_msg = PointCloud()
+                    cropped_pc_msg.header.frame_id = current_pc2_msg_.header.frame_id
+                    cropped_pc_msg.header.stamp = current_pc2_msg_.header.stamp
+
+                    object_points_dict, cropped_pc = get_point_cloud_segments(current_pc2_msg_, current_detection_msg_, 
+                                                                              current_camera_info_msg_, 
+                                                                              cropped_pc_msg=cropped_pc_msg, debug=debug)
+
+                    object_positions_dict = estimate_object_positions(object_points_dict, debug=debug)
+
+                    object_list_msg = ObjectList()
+                    marker_array_msg = MarkerArray()
+
+                    object_marker_id = 0
+                    for label, object_position in object_positions_dict.items():
+                        object_msg = Object(label=label, pose=Pose(position=Point(*object_position), 
+                                                                   orientation=Quaternion(0., 0., 0., 1.)))
+                        object_msg.header.frame_id = current_camera_info_msg_.header.frame_id
+                        object_list_msg.objects.append(object_msg)
+
+                        marker_msg, \
+                            text_marker_msg = get_point_markers(object_position, 
+                                                                frame_id='camera_color_optical_frame', 
+                                                                label=object_msg.label, 
+                                                                color_value=class_colors_dict[object_msg.label])
+
+                        marker_array_msg.markers.append(marker_msg)
+                        marker_array_msg.markers.append(text_marker_msg)
+
+                    object_list_publisher.publish(object_list_msg)
+                    object_marker_publisher.publish(marker_array_msg)
+
+                    cropped_pc_debug_publisher.publish(cropped_pc_msg)
+
+                    elapsed_time = time.time() - position_estimation_start_time
+                    rospy.loginfo(f'[pose_estimator] Estimated object positions in {elapsed_time:.2f}s')
+
+                    # Optionally save results: taskboard points and object positions dict.
+                    # Mostly for testing and debugging.
+                    if save_output:
+                        rospy.loginfo(f'[pose_estimator] Saving output data...')
+                        if not os.path.isdir(output_dir_path):
+                            rospy.loginfo(f'[pose_estimator] Output directory'
+                                          f' {output_dir_path} does not exist!'
+                                          f' Creating now...')
+                            os.makedirs(output_dir_path)
+
+                        with open(os.path.join(output_dir_path, 'pose_estimator_object_positions_dict.pkl'), 'wb') as handle:
+                            pickle.dump(object_positions_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+                        np.save(os.path.join(output_dir_path, 'pose_estimator_taskboard_points.npy'), np.stack(object_points_dict['taskboard']))
+
+                    tb_orientation_estimation_start_time = time.time()
+
+                    ## ----------------------------------------------------------------------
+                    ## Orientation Estimation Test Program:
+                    ## ----------------------------------------------------------------------
+
+                    ## ----------------------------------------
+                    ## Parameters and Variables:
+                    ## ----------------------------------------
+
+                    arrow_scale_factor = 0.2
+                    hide_pc_points = False
+                    plot_fitted_rectangle, plot_fitted_rectified_rectangle = True, True
+
+                    vertical_side_found, horizontal_side_found = False, False
+
+                    ## ----------------------------------------
+                    ## Data Loading and Preprocessing:
+                    ## ----------------------------------------
+
+                    # Get 3D point cloud segment corresponding to the taskboard:
+                    points_array = np.stack(object_points_dict['taskboard'])
+
+                    # Copy unfiltered data for visualizations:
+                    unfiltered_points_array = points_array.copy()
+
+                    # Remove outliers using IQR method:
+                    filtered_points_df = pd.DataFrame(data=points_array, columns=['x', 'y', 'z'])
+
+                    if debug:
+                        print('\n[DEBUG] Taskboard points array shape:', points_array.shape)
+                    for dim in ['x', 'y', 'z']:
+                        Q1 = np.percentile(filtered_points_df[dim], 25, method='midpoint')
+                        Q3 = np.percentile(filtered_points_df[dim], 75, method='midpoint')
+                        IQR = Q3 - Q1
+                        upper_bound = Q3 + (1.5 * IQR)
+                        lower_bound = Q1 - (1.5 * IQR)
+
+                        filtered_points_df = filtered_points_df.loc[(filtered_points_df[dim] > lower_bound) & (filtered_points_df[dim] < upper_bound)]
+                        if debug:
+                            print('[DEBUG] Removing outliers in {}:'.format(dim))
+                            print('[DEBUG] Number of remaining points:', len(filtered_points_df))
+
+                    points_array = np.array(filtered_points_df)
+
+                    # # + For testing only: rotate PC data:
+                    # # Rotate PC about Z-Axis:
+                    # rot_angle = np.deg2rad(270)
+                    # rot_matrix = np.array([[np.cos(rot_angle), -np.sin(rot_angle), 0],
+                    #                        [np.sin(rot_angle), np.cos(rot_angle), 0],
+                    #                        [0, 0, 1]])
+                    # # # Rotate PC about X-Axis:
+                    # # rot_angle = np.deg2rad(20)
+                    # # rot_matrix = np.array([[1, 0, 0],
+                    # #                        [0, np.cos(rot_angle), -np.sin(rot_angle)],
+                    # #                        [0, np.sin(rot_angle), np.cos(rot_angle)]])
+                    # points_array = points_array @ rot_matrix
+
+                    # # + For testing only: rectify object positions (for flipped PC, etc.) and rotate:
+                    # for object_id, position_array in object_positions_dict.items():
+                    #     object_positions_dict[object_id] = position_array @ rot_matrix
+
+                    centroid = points_array.mean(axis=0)
+                    if debug:
+                        marker_array_msg = MarkerArray()
+                        marker_msg, text_marker_msg = get_point_markers(centroid, frame_id='camera_depth_optical_frame', 
+                                                                        label='Centroid', color_value=(0., 0., 0.))
+                        # marker_msg, text_marker_msg = get_point_markers(centroid, frame_id='camera_color_optical_frame', 
+                        #                                                 label='Centroid', color_value=(0., 0., 0.))
+
+                        marker_array_msg.markers.append(marker_msg)
+                        marker_array_msg.markers.append(text_marker_msg)
+
+                        object_marker_publisher.publish(marker_array_msg)
+
+                    ## ----------------------------------------
+                    ## Extracting Normal of Best-Fit Plane:
+                    ## ----------------------------------------
+
+                    # Get best-fit plane normal:
+                    eigenvectors_eigh = np.linalg.eigh(np.cov(points_array.T))[1]
+                    plane_normal_eigh = eigenvectors_eigh[:, 0]
+
+                    ## ----------------------------------------
+                    ## Fitting Minimum Bounding Rectangle on Planar Data:
+                    ## ----------------------------------------
+
+                    # Estimate minimum bounding rectangle on data projected onto best-fit plane:
+                    rot_matrix = rotation_matrix_from_vectors([0, 0, 1], plane_normal_eigh)
+                    points_oriented_array = points_array @ rot_matrix
+
+                    rect_oriented_corners = minimum_bounding_rectangle(points_oriented_array[:, :2])
+                    mid_point_oriented = points_oriented_array.mean(axis=0)
+
+                    rect_oriented_corners_aug = np.hstack((rect_oriented_corners,
+                                                  np.ones((rect_oriented_corners.shape[0], 1)) * mid_point_oriented[2]))
+                    rect_rectified_corners = rect_oriented_corners_aug @ rot_matrix.T
+
+                    ## ----------------------------------------
+                    ## Estimating Taskboard Orientation:
+                    ## ----------------------------------------
+
+                    # Localize quadrant corners using known detected objects:
+                    object_nearest_corner_dict = {}
+                    for object_id, position_array in object_positions_dict.items():
+                        corner_id = np.linalg.norm(rect_rectified_corners - position_array, axis=1).argmin()
+                        object_nearest_corner_dict[object_id] = corner_id
+
+                    quadrant_corner_id_candidates = {'1': [], '2': [], '3': [], '4': []}
+                    if 'red_button' in object_nearest_corner_dict.keys():
+                        quadrant_corner_id_candidates['1'].append(object_nearest_corner_dict['red_button'])
+                    if 'blue_button' in object_nearest_corner_dict.keys():
+                        quadrant_corner_id_candidates['1'].append(object_nearest_corner_dict['blue_button'])
+                    if 'multimeter_connector' in object_nearest_corner_dict.keys():
+                        quadrant_corner_id_candidates['1'].append(object_nearest_corner_dict['multimeter_connector'])
+                    if 'multimeter_probe' in object_nearest_corner_dict.keys():
+                        quadrant_corner_id_candidates['2'].append(object_nearest_corner_dict['multimeter_probe'])
+                    if 'hatch_handle' in object_nearest_corner_dict.keys():
+                        quadrant_corner_id_candidates['2'].append(object_nearest_corner_dict['hatch_handle'])
+                    if 'lcd' in object_nearest_corner_dict.keys():
+                        quadrant_corner_id_candidates['4'].append(object_nearest_corner_dict['lcd'])
+                    if 'slider' in object_nearest_corner_dict.keys():
+                        quadrant_corner_id_candidates['4'].append(object_nearest_corner_dict['slider'])
+
+                    quadrant_corner_ids = {}
+                    for quadrant_id, corner_candidate_list in quadrant_corner_id_candidates.items():
+                        try:
+                            quadrant_corner_ids[quadrant_id] = max(set(corner_candidate_list), key=corner_candidate_list.count)
+                        except ValueError:
+                            quadrant_corner_ids[quadrant_id] = None
+                    corner_quadrant_ids = dict(zip(quadrant_corner_ids.values(), quadrant_corner_ids.keys()))
+
+                    # TODO: Remove convenience data copy:
+                    rect_corners = rect_rectified_corners.copy()
+
+                    # Estimate first orientation vector:
+                    if quadrant_corner_ids['1'] is not None and quadrant_corner_ids['2'] is not None:
+                        orientation_vector_2 = rect_corners[quadrant_corner_ids['1'], :] - rect_corners[quadrant_corner_ids['2'], :]
+                        horizontal_side_found = True
+                    elif quadrant_corner_ids['3'] is not None and quadrant_corner_ids['4'] is not None:
+                        orientation_vector_2 = rect_corners[quadrant_corner_ids['3'], :] - rect_corners[quadrant_corner_ids['4'], :]
+                        horizontal_side_found = True
+                    else:
+                        rospy.logwarn('[pose_estimator] Can not determine top/bottom of board!')
+                        orientation_vector_2 = rect_corners[2, :] - rect_corners[1, :]
+
+                    # Estimate first orientation vector:
+                    if quadrant_corner_ids['1'] is not None and quadrant_corner_ids['4'] is not None:
+                        orientation_vector_1 = rect_corners[quadrant_corner_ids['1'], :] - rect_corners[quadrant_corner_ids['4'], :]
+                        vertical_side_found = True
+                    elif quadrant_corner_ids['2'] is not None and quadrant_corner_ids['3'] is not None:
+                        orientation_vector_1 = rect_corners[quadrant_corner_ids['2'], :] - rect_corners[quadrant_corner_ids['3'], :]
+                        vertical_side_found = True
+                    else:
+                        rospy.logwarn('[pose_estimator] Can not determine right/left side of board!')
+                        orientation_vector_1 = rect_corners[1, :] - rect_corners[0, :]
+
+                    orientation_vectors = np.stack((orientation_vector_1 / np.linalg.norm(orientation_vector_1),
+                                                    orientation_vector_2 / np.linalg.norm(orientation_vector_2)))
+
+                    # Verify that the estimated orientation vectors are both perpendicular to the plane normal vector:
+                    tb_orientation_matrix = np.vstack((orientation_vectors, plane_normal_eigh))
+                    assert all((orientation_vectors[:, :] @ plane_normal_eigh) < 1e-10), \
+                           rospy.logerr('[pose_estimator] Estimated orientation vectors are not orthogonal! Orientation matrix:\n {}'.format(tb_orientation_matrix))
+
+                    # Re-orient axes for desired convention:
+                    reorientation_matrix = np.array([[0, -1, 0], [-1, 0, 0], [0, 0, -1]])
+                    tb_orientation_matrix = tb_orientation_matrix @ reorientation_matrix 
+
+                    tb_tf_matrix = np.hstack((np.vstack((tb_orientation_matrix, np.zeros(3))), np.array([[0, 0, 0, 1]]).T))
+                    # tb_tf_matrix = np.hstack((np.vstack((tb_orientation_matrix, np.zeros(3))), np.array([[centroid[0], centroid[1], centroid[2], 1]]).T))
+
+                    # Compute and normalize orientation quaternion:
+                    orientation_quaternion = tf_conversions.transformations.quaternion_from_matrix(tb_tf_matrix)
+                    orientation_quaternion /= np.linalg.norm(orientation_quaternion)
+
+                    if debug:
+                        print('[DEBUG] Quadrant corner IDs:', quadrant_corner_ids)
+                        print('[DEBUG] Corner quadrant IDs:', corner_quadrant_ids)
+
+                        print('\n[DEBUG] Estimated best-fit plane normal vector:')
+                        print(plane_normal_eigh)
+
+                        print('\n[DEBUG] Taskboard orientation matrix:'); print(tb_orientation_matrix)
+                        print('[DEBUG] Taskboard surface centroid position:'); print(centroid)
+
+                    elapsed_time = time.time() - tb_orientation_estimation_start_time
+                    rospy.loginfo(f'[pose_estimator] Estimated taskboard orientation in {elapsed_time:.2f}s')
+
+                    elapsed_time = time.time() - position_estimation_start_time
+                    rospy.loginfo(f'[pose_estimator] Finished in {elapsed_time:.2f}s')
+                    rospy.loginfo(f'[pose_estimator] Continuously publishing current {taskboard_frame_name} transform')
+
+                    ## ----------------------------------------
+                    ## Visualizing Results:
+                    ## ----------------------------------------
+
+                    if debug:
+                        fig = plt.figure('Original Point Cloud Data')
+                        ax = fig.add_subplot(projection='3d')
+                        ax.scatter(unfiltered_points_array[:, 0], unfiltered_points_array[:, 1],
+                                   unfiltered_points_array[:, 2],
+                                   label='Original', c='tab:blue', s=0.01, alpha=1.0)
+                        ax.legend()
+                        ax.set_xlabel('$x$')
+                        ax.set_ylabel('$y$')
+                        ax.set_zlabel('$z$')
+
+                        orig_xlims = ax.get_xlim()
+                        orig_ylims = ax.get_ylim()
+                        orig_zlims = ax.get_zlim()
+
+                        _ = ax.view_init(-140, -120)
+
+                        fig = plt.figure('Taskboard Orientation Estimation Results')
+                        ax = fig.add_subplot(projection='3d')
+
+                        if not hide_pc_points:
+                            ax.scatter(points_array[:, 0], points_array[:, 1],
+                                       points_array[:, 2],
+                                       label='Points', c='black', s=0.01, alpha=0.2)
+
+                        # Best-fit plane's normal vector:
+                        scale = arrow_scale_factor
+                        end_point = plane_normal_eigh * scale
+                        ax.arrow3D(*centroid, *end_point, mutation_scale=10)
+                        ax.annotate3D('Plane Normal',
+                                      xyz=end_point + centroid + (scale * .0),
+                                      xytext=(0., 0.),
+                                      textcoords='offset points',
+                                      ha='left', va='bottom')
+
+                        # Visualize taskboard centroid:
+                        ax.scatter(*centroid, label='Centroid', c='tab:orange', s=6.0)
+
+                        # Visualize best-fit plane representation:
+                        plane_bounds = list(zip(points_array.min(axis=(0))[:2],
+                                                points_array.max(axis=(0))[:2]))
+                        xx, yy = np.meshgrid(np.linspace(plane_bounds[0][0], plane_bounds[0][1], 10),
+                                             np.linspace(plane_bounds[1][0], plane_bounds[1][1], 10))
+                        A, B, C = plane_normal_eigh
+                        D = -centroid @ plane_normal_eigh
+                        zz = (-(A * xx) - (B * yy) - D) / C
+                        ax.plot_surface(xx, yy, zz, alpha=0.3, facecolor='grey',
+                                        color='black', cstride=3, rstride=3,)
+                        ax.annotate3D('Best-fit Plane',
+                                      xyz=(plane_bounds[0][1], plane_bounds[1][1], zz.max()),
+                                      xytext=(0., 0.), textcoords='offset points',
+                                      ha='left', va='bottom')
+
+                        # Visualized fitted and rectified 2D rectangles:
+                        if plot_fitted_rectangle:
+                            rect_corners_naive = minimum_bounding_rectangle(points_array[:, :2])
+                            rect_corners_aug = np.vstack((rect_corners_naive, rect_corners_naive[0, :]))
+                            rect_corners_aug = np.hstack((rect_corners_aug,
+                                                      np.ones((rect_corners_aug.shape[0], 1)) * centroid[2]))
+                            ax.plot(rect_corners_aug[:, 0], rect_corners_aug[:, 1], rect_corners_aug[:, 2],
+                                     color='black', label='Best-Fit Rectangle (Naive)')
+
+                        if plot_fitted_rectified_rectangle:
+                            rect_corners_aug = np.vstack((rect_rectified_corners, rect_rectified_corners[0, :]))
+                            ax.plot(rect_corners_aug[:, 0], rect_corners_aug[:, 1], rect_corners_aug[:, 2],
+                                     color='pink', label='Best-Fit Rectangle (Rectified)')
+
+                        # Annotate quadrant points:
+                        for corner_id, quadrant_id in corner_quadrant_ids.items():
+                            if corner_id is None:
+                                continue
+
+                            corner_point = rect_rectified_corners[corner_id, :]
+                            ax.scatter(*corner_point, c='black', marker='s')
+                            ha = 'right' if corner_point[0] <= 0 else 'left'
+                            va = 'top' if corner_point[1] <= 0 else 'bottom'
+                            ax.annotate3D('Q. {}'.format(quadrant_id),
+                                          xyz=corner_point + (corner_point * 0.05),
+                                          xytext=(0., 0.), textcoords='offset points',
+                                          ha=ha, va=va)
+
+                        # Annotate top or bottom side of TB (if possible):
+                        if quadrant_corner_ids['1'] is not None and quadrant_corner_ids['2'] is not None:
+                            dist = rect_corners[quadrant_corner_ids['1'], :] - rect_corners[quadrant_corner_ids['2'], :]
+                            annotation_point = np.array([rect_corners[quadrant_corner_ids['2'], 0] + (dist[0] / 2.),
+                                                         rect_corners[quadrant_corner_ids['2'], 1] + (dist[1] / 2.),
+                                                         rect_corners[quadrant_corner_ids['2'], 2] + (dist[2] / 2.)])
+                            ax.annotate3D('Top',
+                                          xyz=annotation_point + (annotation_point * 0.15),
+                                          xytext=(0., 0.), textcoords='offset points',
+                                          ha='center', va='top')
+                        elif quadrant_corner_ids['3'] is not None and quadrant_corner_ids['4'] is not None:
+                            dist = rect_corners[quadrant_corner_ids['4'], :] - rect_corners[quadrant_corner_ids['3'], :]
+                            annotation_point = np.array([rect_corners[quadrant_corner_ids['3'], 0] + (dist[0] / 2.),
+                                                         rect_corners[quadrant_corner_ids['3'], 1] + (dist[1] / 2.),
+                                                         rect_corners[quadrant_corner_ids['3'], 2] + (dist[2] / 2.)])
+                            ax.annotate3D('Bottom',
+                                          xyz=annotation_point + (annotation_point * 0.15),
+                                          xytext=(0., 0.), textcoords='offset points',
+                                          ha='center', va='top')
+
+                        # Annotate left or right side of TB (if possible):
+                        if quadrant_corner_ids['1'] is not None and quadrant_corner_ids['4'] is not None:
+                            dist = rect_corners[quadrant_corner_ids['1'], :] - rect_corners[quadrant_corner_ids['4'], :]
+                            annotation_point = np.array([rect_corners[quadrant_corner_ids['4'], 0] + (dist[0] / 2.),
+                                                         rect_corners[quadrant_corner_ids['4'], 1] + (dist[1] / 2.),
+                                                         rect_corners[quadrant_corner_ids['4'], 2] + (dist[2] / 2.)])
+                            ax.annotate3D('Right',
+                                          xyz=annotation_point + (annotation_point * 0.15),
+                                          xytext=(0., 0.), textcoords='offset points',
+                                          ha='center', va='top')
+                        elif quadrant_corner_ids['2'] is not None and quadrant_corner_ids['3'] is not None:
+                            dist = rect_corners[quadrant_corner_ids['2'], :] - rect_corners[quadrant_corner_ids['3'], :]
+                            annotation_point = np.array([rect_corners[quadrant_corner_ids['3'], 0] + (dist[0] / 2.),
+                                                         rect_corners[quadrant_corner_ids['3'], 1] + (dist[1] / 2.),
+                                                         rect_corners[quadrant_corner_ids['3'], 2] + (dist[2] / 2.)])
+                            ax.annotate3D('Left',
+                                          xyz=annotation_point + (annotation_point * 0.15),
+                                          xytext=(0., 0.), textcoords='offset points',
+                                          ha='center', va='top')
+
+                        # Visualize orientation vectors:
+                        for dim in range(2):
+                            scale = arrow_scale_factor
+                            end_point = orientation_vectors[dim, :] * scale
+                            side_found = horizontal_side_found if dim else vertical_side_found
+                            head_width = 0.01 if side_found else 0.
+                            arrowstyle = '->' if side_found else '-'
+
+                            ax.arrow3D(*centroid, *end_point, mutation_scale=10, arrowstyle=arrowstyle)
+
+                        # Visualized detected objects' positions:
+                        for object_id, position_array in object_positions_dict.items():
+                            ax.scatter(*position_array,
+                                       c=[np.array(class_colors_dict[object_id]) / 255.],
+                                       label='Object: {}'.format(object_id))
+
+                        _ = ax.set_xlabel('$x$')
+                        _ = ax.set_ylabel('$y$')
+                        _ = ax.set_zlabel('$z$')
+
+                        _ = ax.set_xlim(np.array(orig_xlims) * 1.0)
+                        _ = ax.set_ylim(np.array(orig_ylims) * 1.0)
+                        _ = ax.set_zlim(np.array(orig_zlims) * 1.0)
+
+                        _ = plt.legend(prop={'size': 7}, bbox_to_anchor=(1.03, 1.0))
+                        _ = ax.view_init(-140, -120)
+
+                        plt.show()
+
+                else:
+                    rospy.logwarn('[pose_estimator] Could not get a pointcloud message from topic {}!'.format(pointcloud_topic) + \
+                                  'Skipping pose estimation for this detection result...')
+                current_detection_msg_ = None
+
+            # Broadcast estimated taskboard frame:
+            if orientation_quaternion is not None:
+                tf_msg = TransformStamped()
+                tf_msg.header.stamp = rospy.Time.now()
+                tf_msg.header.frame_id = 'camera_depth_optical_frame'
+                tf_msg.child_frame_id = taskboard_frame_name
+                tf_msg.transform.translation = Vector3(*centroid)
+                tf_msg.transform.rotation = Quaternion(*orientation_quaternion)
+
+                tf_broadcaster.sendTransform(tf_msg)
+
+                # TODO: Create TF to visualize taskboard_frame wrt dummy_link:
+                # tf_msg_test = TransformStamped()
+
+            rate.sleep()
+    except (KeyboardInterrupt, rospy.ROSInterruptException):
+        rospy.loginfo('[pose_estimator] Stopping node')

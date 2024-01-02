@@ -1,0 +1,184 @@
+#!/usr/bin/env python3
+
+"""
+Runs a CNN detector on a single image and returns the result.
+"""
+
+import os
+import sys
+import time
+import pickle
+
+import rospy
+import rospkg
+import cv2
+import torch
+
+from cv_bridge import CvBridge, CvBridgeError
+from torchvision import tv_tensors
+
+from sensor_msgs.msg import Image
+from eurobin_perception.msg import BoundingBox, BoundingBoxList
+
+from eurobin_perception.models import get_tb_cnn_model
+from eurobin_perception.utils import get_bbox_dicts, filter_preds
+from eurobin_perception.dataset import TaskboardDataset
+from eurobin_perception.visualization import load_class_color_map, annotate_image
+
+supported_torch_devices_ = ['cpu', 'gpu']
+
+
+if __name__ == '__main__':
+    ## ----------------------------------------------------------------------
+    ## ROS Initializations:
+    ## ----------------------------------------------------------------------
+    rospy.init_node('single_cnn_detector')
+    rate = rospy.Rate(1)
+
+    package_path = rospkg.RosPack().get_path('eurobin_perception')
+
+    model_weights_file_path = rospy.get_param('~model_weights_file_path', '')
+    class_colors_file_path = rospy.get_param('~class_colors_file_path','')
+    dataset_dir_path = rospy.get_param('~dataset_dir_path', '')
+    output_dir_path = rospy.get_param('~output_dir_path', 
+                                      os.path.join(package_path, 'output_data'))
+
+    image_topic = rospy.get_param('~image_topic', '/camera/color/image_raw')
+    image_pub_topic = rospy.get_param('~image_pub_topic', 
+                                      '/eurobin_perception/detection_images')
+    input_image_pub_topic = rospy.get_param('~input_image_pub_topic', 
+                                            '/eurobin_perception/input_images')
+    detection_pub_topic = rospy.get_param('~detection_pub_topic', 
+                                          '/eurobin_perception/detection_result')
+
+    publish_visual_output = rospy.get_param('~publish_visual_output', True)
+    display_output = rospy.get_param('~display_output', False)
+    save_output = rospy.get_param('~save_output', False)
+
+    device = rospy.get_param('~device', 'cpu')
+
+    bb_publisher = rospy.Publisher(detection_pub_topic, BoundingBoxList, queue_size=10)
+    if publish_visual_output:
+        detection_image_publisher = rospy.Publisher(image_pub_topic, Image, queue_size=10)
+        input_image_publisher = rospy.Publisher(input_image_pub_topic, Image, queue_size=10)
+
+    # Verify device for detection model:
+    if device in supported_torch_devices_:
+        rospy.loginfo('[single_cnn_detector] Will run model on {}'.format(device))
+    else:
+        rospy.logerr('[single_cnn_detector] Invalid value for device parameter! Must be one of {}'.format(supported_torch_devices_))
+        sys.exit()
+    if device == 'gpu' and not torch.cuda.is_available():
+        rospy.logerr('[single_cnn_detector] Could not detect gpu device! Terminating.')
+        sys.exit()
+
+    ## ----------------------------------------------------------------------
+    ## CNN Initializations:
+    ## ----------------------------------------------------------------------
+
+    rospy.loginfo('[single_cnn_detector] Loading pretrained Faster R-CNN model from: {}'.format(model_weights_file_path))
+    model = get_tb_cnn_model()
+    model.load_state_dict(torch.load(model_weights_file_path))
+    model.eval()
+
+    tb_dataset = TaskboardDataset(root=dataset_dir_path)
+    tb_labels_list = tb_dataset.gt_labels_list
+    class_colors_dict = load_class_color_map(class_colors_file_path)
+
+    ## ----------------------------------------------------------------------
+    ## Detector Execution:
+    ## ----------------------------------------------------------------------
+
+    bridge = CvBridge()
+
+    try:
+        rospy.loginfo('[single_cnn_detector] Grabbing a single message from image topic: {}'.format(image_topic))
+        image_msg = rospy.wait_for_message(image_topic, Image, timeout=5)
+
+        try:
+            image_cv = bridge.imgmsg_to_cv2(image_msg, "bgr8")
+        except CvBridgeError as e:
+            rospy.logerr('[single_cnn_detector] Failed to convert image message to opencv format!')
+            print('Error:', e)
+            sys.exit()
+
+        detection_start_time = time.time()
+
+        # Preprocess input image:
+        image_torch = tv_tensors.Image(image_cv)
+        
+        image_torch = image_torch.permute((2, 0, 1))                        # Source: (H, W, C). Desired(C, H, W)
+        image_torch = tb_dataset.transforms(image_torch)
+        model_inputs = [image_torch.to(device)]
+
+        # Run NN model on input image:
+        rospy.loginfo('[single_cnn_detector] Running detection model on image...')
+        model_start_time = time.time()
+        outputs = model(model_inputs)
+        model_inference_time = time.time() - model_start_time 
+        rospy.loginfo('[single_cnn_detector] Model inference time: {:.2f}s'.format(model_inference_time))
+
+        # Process NN outputs:
+        image_id = '0'
+        model_result = {image_id: outputs[0]}
+        bboxes = get_bbox_dicts(model_result, image_id, [item for item in tb_labels_list if item != 'background'])
+        bboxes = filter_preds(bboxes, score_threshold=0.7)
+
+        # Publish results in a BoundingBoxList message:
+        bbox_list_msg = BoundingBoxList()
+        for bbox_dict in bboxes:
+            bbox_msg = BoundingBox()
+            bbox_msg.xmin = bbox_dict['xmin']
+            bbox_msg.xmax = bbox_dict['xmax']
+            bbox_msg.ymin = bbox_dict['ymin']
+            bbox_msg.ymax = bbox_dict['ymax']
+            bbox_msg.label = bbox_dict['class']
+            bbox_msg.confidence = bbox_dict['confidence']
+
+            bbox_list_msg.bounding_boxes.append(bbox_msg)
+
+        bb_publisher.publish(bbox_list_msg)
+
+        if publish_visual_output:
+            # Annotate image with BBs:
+            detection_image_cv = annotate_image(cv2.cvtColor(image_cv, cv2.COLOR_RGB2BGR), bboxes, class_colors_dict)
+            detection_image_cv = cv2.cvtColor(detection_image_cv, cv2.COLOR_BGR2RGB)
+            # TODO: Consider optimizing to avoid the color conversions to and fro.
+
+            input_image_msg = bridge.cv2_to_imgmsg(image_cv, encoding="bgr8")
+            input_image_msg.header.stamp = rospy.Time.now()
+            input_image_msg.header.frame_id = image_msg.header.frame_id
+            input_image_publisher.publish(input_image_msg)
+
+            detection_image_msg = bridge.cv2_to_imgmsg(detection_image_cv, encoding="bgr8")
+            detection_image_msg.header.stamp = rospy.Time.now()
+            detection_image_msg.header.frame_id = image_msg.header.frame_id
+            detection_image_publisher.publish(detection_image_msg)
+
+        if display_output:
+            cv2.imshow('Detection image', detection_image_cv)
+            cv2.waitKey(0)
+
+        rospy.loginfo('[single_cnn_detector] Finished in {:.2f}s'.format(time.time() - detection_start_time))
+
+        # Optionally save results: input image, annotated images, and detection
+        # result (bboxes) in a pickle file.
+        if save_output:
+            rospy.loginfo(f'[single_cnn_detector] Saving output data...')
+            if not os.path.isdir(output_dir_path):
+                rospy.loginfo(f'[single_cnn_detector] Output directory'
+                              f' {output_dir_path} does not exist!'
+                              f' Creating now...')
+                os.makedirs(output_dir_path)
+
+            with open(os.path.join(output_dir_path, 'detection_result.pkl'), 'wb') as handle:
+                pickle.dump(bboxes, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            cv2.imwrite(os.path.join(output_dir_path, 'input_image.png'), image_cv)
+            if detection_image_cv is not None:
+                cv2.imwrite(os.path.join(output_dir_path, 'detection_image.png'), detection_image_cv)
+
+    except (KeyboardInterrupt, rospy.ROSInterruptException):
+        rospy.loginfo('[single_cnn_detector] Stopping node')
+        if display_output:
+            cv2.destroyAllWindows()
+        sys.exit()

@@ -1,0 +1,10 @@
+cv-bridge==1.16.2
+matplotlib==3.7.4
+numpy==1.24.4
+opencv_python==4.9.0.80
+PyYAML==5.3.1
+scipy==1.10.1
+seaborn==0.12.2
+setuptools==69.0.3
+torch==2.1.0
+torchvision==0.16.0

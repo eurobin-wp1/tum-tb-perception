@@ -1,0 +1,40 @@
+blue_button:
+- 26.0
+- 201.0
+- 56.0
+hatch_handle:
+- 159.0
+- 72.0
+- 0.0
+lcd:
+- 232.0
+- 0.0
+- 11.0
+multimeter_connector:
+- 241.0
+- 76.0
+- 193.0
+multimeter_probe:
+- 163.0
+- 163.0
+- 163.0
+multimeter_socket:
+- 255.0
+- 196.0
+- 0.0
+red_button:
+- 255.0
+- 124.0
+- 0.0
+slider:
+- 139.0
+- 43.0
+- 226.0
+taskboard:
+- 2.0
+- 62.0
+- 255.0
+wire_connector:
+- 0.0
+- 215.0
+- 255.0

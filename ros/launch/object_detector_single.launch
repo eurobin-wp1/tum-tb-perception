@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<launch>
+
+    <arg name="model_weights_file_path" default="$(find eurobin_perception)/models/fasterrcnn_10_epochs_07_seed_2_20231205_222706.pt"/>
+    <arg name="class_colors_file_path" default="$(find eurobin_perception)/config/class_colors_taskboard.yaml"/>
+    <arg name="dataset_dir_path" default="/home/ahmed/tum/workspace/euRobin/detection_task/dataset"/>
+    <arg name="output_dir_path" default="$(find eurobin_perception)/output_data"/>
+    <arg name="image_topic" default="/camera/color/image_raw"/>
+    <arg name="image_pub_topic" default="/eurobin_perception/detection_images"/>
+    <arg name="input_image_pub_topic" default="/eurobin_perception/input_images"/>
+    <arg name="detection_pub_topic" default="/eurobin_perception/detection_result"/>
+    <arg name="publish_visual_output" default="true"/>
+    <arg name="display_output" default="false"/>
+    <arg name="save_output" default="false"/>
+    <arg name="device" default="cpu"/>
+
+    <node pkg="eurobin_perception" type="single_cnn_detector_node" name="cnn_detector"
+        output="screen" respawn="false">
+        <param name="model_weights_file_path" type="str" value="$(arg model_weights_file_path)"/>
+        <param name="class_colors_file_path" type="str" value="$(arg class_colors_file_path)"/>
+        <param name="dataset_dir_path" type="str" value="$(arg dataset_dir_path)"/>
+        <param name="output_dir_path" type="str" value="$(arg output_dir_path)"/>
+        <param name="image_topic" type="str" value="$(arg image_topic)"/>
+        <param name="image_pub_topic" type="str" value="$(arg image_pub_topic)"/>
+        <param name="input_image_pub_topic" type="str" value="$(arg input_image_pub_topic)"/>
+        <param name="detection_pub_topic" type="str" value="$(arg detection_pub_topic)"/>
+        <param name="publish_visual_output" type="bool" value="$(arg publish_visual_output)"/>
+        <param name="display_output" type="bool" value="$(arg display_output)"/>
+        <param name="save_output" type="bool" value="$(arg save_output)"/>
+        <param name="device" type="str" value="$(arg device)"/>
+    </node>
+
+</launch>
