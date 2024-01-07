@@ -70,11 +70,12 @@ def get_class_color(class_colors_dict, class_str):
         
         return list(np.random.random(3) * 255.)
     
-def annotate_image(image, bboxes, class_colors_dict):
+def annotate_image(image, bboxes, class_colors_dict, target_bboxes=None):
     """
     Returns an annotated version of the input image, containing:
       - bounding boxes
       - text labels (slightly transparent to avoid occlusions)
+      - (optional) target/ground-truth transparent bounding boxes
 
     Parameters
     ----------
@@ -84,22 +85,24 @@ def annotate_image(image, bboxes, class_colors_dict):
         Dicts containing info on each bbox (class, xmin, ymin, xmax, ymax, confidence)
     class_colors: dict
         Map between class names and (R, G, B) color tuples (0-255)
+    target_bboxes: list
+        Dicts containing info on each target i.e. ground-truth bbox. (Optional)
 
     Returns
     -------
     image_annotated: numpy.ndarray
         BGR image array, post-annotation.
     """
-    
+
     image_annotated = np.copy(image)
-    
+
     for bbox in bboxes:
         label = bbox['class']
         color = get_class_color(class_colors_dict, label)
 
         # Draw bbox rectangle:
-        image_annotated = cv2.rectangle(image_annotated, 
-                                        (bbox['xmin'], bbox['ymin']), 
+        image_annotated = cv2.rectangle(image_annotated,
+                                        (bbox['xmin'], bbox['ymin']),
                                         (bbox['xmax'], bbox['ymax']),
                                         color=color, thickness=2)
 
@@ -110,23 +113,38 @@ def annotate_image(image, bboxes, class_colors_dict):
             label_str += ': {:.2f}%'.format(float(confidence))
 
         # Estimate area of label box:
-        (w, h), _ = cv2.getTextSize(label_str, CV2_BBOX_FONT, 
+        (w, h), _ = cv2.getTextSize(label_str, CV2_BBOX_FONT,
                                     CV2_BBOX_FONT_SCALE, 1)
-        
+
         # Draw faded label box and text:
         image_overlay = np.copy(image_annotated)
-        image_overlay = cv2.rectangle(image_overlay, 
-                                      (bbox['xmin'], bbox['ymin'] - int(h * 1.5)), 
-                                      (bbox['xmin'] + w, bbox['ymin']), 
+        image_overlay = cv2.rectangle(image_overlay,
+                                      (bbox['xmin'], bbox['ymin'] - int(h * 1.5)),
+                                      (bbox['xmin'] + w, bbox['ymin']),
                                       color, -1)
-        image_overlay = cv2.putText(image_overlay, label_str, 
+        image_overlay = cv2.putText(image_overlay, label_str,
                                     (bbox['xmin'], bbox['ymin'] - 5),
-                                    CV2_BBOX_FONT, CV2_BBOX_FONT_SCALE, 
+                                    CV2_BBOX_FONT, CV2_BBOX_FONT_SCALE,
                                     (255, 255, 255), 1)
         alpha = 0.5
-        cv2.addWeighted(image_overlay, alpha, image_annotated, 
+        cv2.addWeighted(image_overlay, alpha, image_annotated,
                         1 - alpha, 0, image_annotated)
-        
+
+        if target_bboxes is not None:
+             for bbox in target_bboxes:
+                label = bbox['class']
+                color = get_class_color(class_colors_dict, label)
+
+                # Draw faded target bbox rectangle:
+                image_overlay = np.copy(image_annotated)
+                image_overlay = cv2.rectangle(image_overlay,
+                                              (bbox['xmin'], bbox['ymin']),
+                                              (bbox['xmax'], bbox['ymax']),
+                                              color=color, thickness=-1)
+                alpha = 0.05
+                cv2.addWeighted(image_overlay, alpha, image_annotated,
+                                1 - alpha, 0, image_annotated)
+
     return image_annotated
 
 def view_image_cv(image, window_title=''):
