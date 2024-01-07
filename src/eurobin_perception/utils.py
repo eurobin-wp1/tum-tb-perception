@@ -85,10 +85,12 @@ def filter_preds(bboxes, score_threshold=None, label_ignore_list=[]):
     filtered_bboxes = bboxes[:]
 
     if score_threshold is not None:
-        filtered_bboxes = [bbox for bbox in filtered_bboxes if bbox['confidence'] > score_threshold]
+        filtered_bboxes = [bbox for bbox in filtered_bboxes \
+                            if bbox['confidence'] > score_threshold]
         
     if label_ignore_list:
-        filtered_bboxes = [bbox for bbox in filtered_bboxes if bbox['class'] not in label_ignore_list]
+        filtered_bboxes = [bbox for bbox in filtered_bboxes \
+                            if bbox['class'] not in label_ignore_list]
         
     return filtered_bboxes
 
@@ -237,7 +239,8 @@ def rotation_matrix_from_vectors(vec_1, vec_2):
     rotation_matrix: ndarray
         3D matrix that rotates vec_1 to align with vec_2 (3, 3)
     """
-    a, b = (vec_1 / np.linalg.norm(vec_1)).reshape(3), (vec_2 / np.linalg.norm(vec_2)).reshape(3)
+    a = (vec_1 / np.linalg.norm(vec_1)).reshape(3) 
+    b = (vec_2 / np.linalg.norm(vec_2)).reshape(3)
     v = np.cross(a, b)
     c = np.dot(a, b)
     s = np.linalg.norm(v)
