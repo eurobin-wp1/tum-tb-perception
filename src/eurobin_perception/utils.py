@@ -94,6 +94,64 @@ def filter_preds(bboxes, score_threshold=None, label_ignore_list=[]):
         
     return filtered_bboxes
 
+def get_intersect_box(bbox_1_dict, bbox_2_dict):
+    """
+    Returns a box that represents the intersection between two bounding boxes.
+
+    Parameters
+    ----------
+    bbox_1_dict: dict
+        Dict containing the first object's box coordinates.
+    bbox_2_dict: dict
+        Dict containing the second object's box coordinates.
+
+    Returns
+    -------
+    intersect_box_dict: dict
+        Dict containing the coordinates of the intersection box.
+    """
+    intersect_box_dict = {}
+
+    intersect_box_dict['xmin'] = bbox_2_dict['xmin'] if bbox_1_dict['xmin'] < bbox_2_dict['xmin'] else bbox_1_dict['xmin']
+    intersect_box_dict['ymin'] = bbox_2_dict['ymin'] if bbox_1_dict['ymin'] < bbox_2_dict['ymin'] else bbox_1_dict['ymin']
+    intersect_box_dict['xmax'] = bbox_1_dict['xmax'] if bbox_1_dict['xmax'] < bbox_2_dict['xmax'] else bbox_2_dict['xmax']
+    intersect_box_dict['ymax'] = bbox_1_dict['ymax'] if bbox_1_dict['ymax'] < bbox_2_dict['ymax'] else bbox_2_dict['ymax']
+
+    return intersect_box_dict
+
+def get_iou_score(bbox_1_dict, bbox_2_dict):
+    """
+    Computes the Intersection over Union (IoU) score between two bounding boxes,
+    which indicates their alignment (0., 1.).
+
+    Parameters
+    ----------
+    bbox_1_dict: dict
+        Dict containing the first object's box coordinates.
+    bbox_2_dict: dict
+        Dict containing the second object's box coordinates.
+
+    Returns
+    -------
+    iou_score: float
+        Computed IoU score
+    """
+    intersect_dict = get_intersect_box(bbox_1_dict, bbox_2_dict)
+    if (intersect_dict['xmax'] - intersect_dict['xmin']) < 0 or \
+        (intersect_dict['ymax'] - intersect_dict['ymin']) < 0:
+        intersect_area = 0
+    else:
+        intersect_area = abs(intersect_dict['xmax'] - intersect_dict['xmin']) * \
+                           abs(intersect_dict['ymax'] - intersect_dict['ymin'])
+
+    bbox_1_dict_area = abs(bbox_1_dict['xmax'] - bbox_1_dict['xmin']) * \
+                         abs(bbox_1_dict['ymax'] - bbox_1_dict['ymin'])
+    bbox_2_dict_area = abs(bbox_2_dict['xmax'] - bbox_2_dict['xmin']) * \
+                         abs(bbox_2_dict['ymax'] - bbox_2_dict['ymin'])
+    union_area = (bbox_1_dict_area + bbox_2_dict_area) - intersect_area
+
+    return intersect_area / union_area
+
 ## ----------------------------------------------------------------------
 ## Orientation Estimation Helper Functions:
 ## ----------------------------------------------------------------------
