@@ -112,10 +112,22 @@ def get_intersect_box(bbox_1_dict, bbox_2_dict):
     """
     intersect_box_dict = {}
 
-    intersect_box_dict['xmin'] = bbox_2_dict['xmin'] if bbox_1_dict['xmin'] < bbox_2_dict['xmin'] else bbox_1_dict['xmin']
-    intersect_box_dict['ymin'] = bbox_2_dict['ymin'] if bbox_1_dict['ymin'] < bbox_2_dict['ymin'] else bbox_1_dict['ymin']
-    intersect_box_dict['xmax'] = bbox_1_dict['xmax'] if bbox_1_dict['xmax'] < bbox_2_dict['xmax'] else bbox_2_dict['xmax']
-    intersect_box_dict['ymax'] = bbox_1_dict['ymax'] if bbox_1_dict['ymax'] < bbox_2_dict['ymax'] else bbox_2_dict['ymax']
+    if bbox_1_dict['xmin'] < bbox_2_dict['xmin']:
+        intersect_box_dict['xmin'] = bbox_2_dict['xmin']
+    else:
+        intersect_box_dict['xmin'] = bbox_1_dict['xmin']
+    if bbox_1_dict['ymin'] < bbox_2_dict['ymin']:
+        intersect_box_dict['ymin'] = bbox_2_dict['ymin']
+    else:
+        intersect_box_dict['ymin'] = bbox_1_dict['ymin']
+    if bbox_1_dict['xmax'] < bbox_2_dict['xmax']:
+        intersect_box_dict['xmax'] = bbox_1_dict['xmax']
+    else:
+        intersect_box_dict['xmax'] = bbox_2_dict['xmax']
+    if bbox_1_dict['ymax'] < bbox_2_dict['ymax']:
+        intersect_box_dict['ymax'] = bbox_1_dict['ymax']
+    else:
+        intersect_box_dict['ymax'] = bbox_2_dict['ymax']
 
     return intersect_box_dict
 
