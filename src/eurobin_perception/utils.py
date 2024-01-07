@@ -13,10 +13,10 @@ from mpl_toolkits.mplot3d.proj3d import proj_transform
 from matplotlib.text import Annotation
 
 
-def get_bbox_dicts(torch_result, image_id, gt_labels_list):
+def get_bbox_dicts(image_info_dict, gt_labels_list):
     """
-    Converts a torch model result for a single image to a format that is 
-    more convenient for downstream processing.
+    Converts a single image's information dict (boxes, labels, scores) to a
+    format that is more convenient for downstream processing.
 
     The output is a list of bbox dicts, each containing:
       - xmin
@@ -24,15 +24,12 @@ def get_bbox_dicts(torch_result, image_id, gt_labels_list):
       - ymin
       - ymax
       - class
-      - confidence
+      - confidence (if available)
 
     Parameters
     ----------
-    torch_result: dict
-        Output of torch model, mapping image_id to a dict containing that
-        image's bbox, labels, and score tensors.
-    image_id: str
-        ID of image (e.g. filename)
+    image_info_dict: dict
+        Dict containing an image's bbox, labels, and score tensors.
     gt_labels_list: list
         Strings defining class names (indices the same as in trained model)
 
@@ -42,14 +39,18 @@ def get_bbox_dicts(torch_result, image_id, gt_labels_list):
         Dicts containing each detected object's information.
     """
     bboxes = []
+    no_confidence_scores = False
 
-    bbox_tensor = torch_result[image_id]['boxes']
-    label_tensor = torch_result[image_id]['labels']
-    score_tensor = torch_result[image_id]['scores']
+    bbox_tensor = image_info_dict['boxes']
+    label_tensor = image_info_dict['labels']
+    try:
+        score_tensor = image_info_dict['scores']
+    except KeyError:
+        no_confidence_scores = True
 
     for i, row in enumerate(bbox_tensor):
         bboxes.append({'class': None, 'confidence': None,
-                       'xmin': None, 'ymin': None, 
+                       'xmin': None, 'ymin': None,
                        'xmax': None, 'ymax': None})
         bb_coords = row.tolist()
         bboxes[-1]['xmin'] = int(row[0])
@@ -58,8 +59,9 @@ def get_bbox_dicts(torch_result, image_id, gt_labels_list):
         bboxes[-1]['ymax'] = int(row[3])
 
         bboxes[-1]['class'] = gt_labels_list[label_tensor[i] - 1]
-        bboxes[-1]['confidence'] = float(score_tensor[i])
-        
+        if not no_confidence_scores:
+            bboxes[-1]['confidence'] = float(score_tensor[i])
+
     return bboxes
 
 def filter_preds(bboxes, score_threshold=None, label_ignore_list=[]):
