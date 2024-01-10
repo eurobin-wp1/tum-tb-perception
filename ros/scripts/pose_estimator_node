@@ -514,11 +514,21 @@ if __name__ == '__main__':
                     orientation_quaternion /= np.linalg.norm(orientation_quaternion)
 
                     if debug:
-                        print('[DEBUG] Quadrant corner IDs:', quadrant_corner_ids)
+                        print('\n[DEBUG] Rectangle Corners:')
+                        print(rect_corners)
+                        print('[DEBUG] Quadrant Corner ID Candidates:')
+                        print(quadrant_corner_id_candidates)
+
+                        print('\n[DEBUG] Quadrant corner IDs:', quadrant_corner_ids)
                         print('[DEBUG] Corner quadrant IDs:', corner_quadrant_ids)
 
                         print('\n[DEBUG] Estimated best-fit plane normal vector:')
                         print(plane_normal_eigh)
+
+                        print('\n[DEBUG] Orientation vector 1 (normalized):')
+                        print(orientation_vectors[0, :])
+                        print('[DEBUG] Orientation vector 2 (normalized):')
+                        print(orientation_vectors[1, :])
 
                         print('\n[DEBUG] Taskboard orientation matrix:'); print(tb_orientation_matrix)
                         print('[DEBUG] Taskboard surface centroid position:'); print(centroid)
