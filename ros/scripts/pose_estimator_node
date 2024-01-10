@@ -369,11 +369,11 @@ if __name__ == '__main__':
                     if debug:
                         print('\n[DEBUG] Taskboard points array shape:', points_array.shape)
                     for dim in ['x', 'y', 'z']:
-                        Q1 = np.percentile(filtered_points_df[dim], 25, method='midpoint')
-                        Q3 = np.percentile(filtered_points_df[dim], 75, method='midpoint')
-                        IQR = Q3 - Q1
-                        upper_bound = Q3 + (1.5 * IQR)
-                        lower_bound = Q1 - (1.5 * IQR)
+                        lower_percentile = np.percentile(filtered_points_df[dim], 35, method='midpoint')
+                        upper_percentile = np.percentile(filtered_points_df[dim], 65, method='midpoint')
+                        IQR = upper_percentile - lower_percentile
+                        upper_bound = upper_percentile + (1.5 * IQR)
+                        lower_bound = lower_percentile - (1.5 * IQR)
 
                         filtered_points_df = filtered_points_df.loc[(filtered_points_df[dim] > lower_bound) & (filtered_points_df[dim] < upper_bound)]
                         if debug:
