@@ -503,8 +503,8 @@ if __name__ == '__main__':
                            rospy.logerr('[pose_estimator] Estimated orientation vectors are not orthogonal! Orientation matrix:\n {}'.format(tb_orientation_matrix))
 
                     # Re-orient axes for desired convention:
-                    reorientation_matrix = np.array([[0, -1, 0], [-1, 0, 0], [0, 0, -1]])
-                    tb_orientation_matrix = tb_orientation_matrix @ reorientation_matrix 
+                    reorientation_matrix = np.array([[0, 1, 0], [1, 0, 0], [0, 0, -1]])
+                    tb_orientation_matrix = reorientation_matrix @ tb_orientation_matrix
 
                     tb_tf_matrix = np.hstack((np.vstack((tb_orientation_matrix, np.zeros(3))), np.array([[0, 0, 0, 1]]).T))
                     # tb_tf_matrix = np.hstack((np.vstack((tb_orientation_matrix, np.zeros(3))), np.array([[centroid[0], centroid[1], centroid[2], 1]]).T))
