@@ -366,7 +366,23 @@ if __name__ == '__main__':
                             cropped_pc_label='taskboard',
                             debug=debug
                     )
-                    object_points_dict = convert_object_points_to_arrays(object_points_dict, debug=debug)
+                    object_points_dict = convert_object_points_to_arrays(object_points_dict)
+
+                    # Copy unfiltered taskboard data for later visualizations:
+                    unfiltered_points_array = object_points_dict['taskboard'].copy()
+
+                    # Remove outliers using IQR method:
+                    for object_id, points_array in object_points_dict.items():
+                        if debug:
+                            print(f'\n[DEBUG] Removing outliers from {object_id} points...')
+
+                        percentiles = (35, 65) if object_id == 'taskboard' \
+                                        else (25, 75)
+                        filtered_points_array = remove_outliers(points_array,
+                                                                percentiles=percentiles,
+                                                                debug=debug)
+                        object_points_dict[object_id] = filtered_points_array
+
                     object_positions_dict = estimate_object_positions(object_points_dict, debug=debug)
 
                     object_list_msg = ObjectList()
@@ -434,29 +450,7 @@ if __name__ == '__main__':
                     ## ----------------------------------------
 
                     # Get 3D point cloud segment corresponding to the taskboard:
-                    points_array = np.stack(object_points_dict['taskboard'])
-
-                    # Copy unfiltered data for visualizations:
-                    unfiltered_points_array = points_array.copy()
-
-                    # Remove outliers using IQR method:
-                    filtered_points_df = pd.DataFrame(data=points_array, columns=['x', 'y', 'z'])
-
-                    if debug:
-                        print('\n[DEBUG] Taskboard points array shape:', points_array.shape)
-                    for dim in ['x', 'y', 'z']:
-                        lower_percentile = np.percentile(filtered_points_df[dim], 35, method='midpoint')
-                        upper_percentile = np.percentile(filtered_points_df[dim], 65, method='midpoint')
-                        IQR = upper_percentile - lower_percentile
-                        upper_bound = upper_percentile + (1.5 * IQR)
-                        lower_bound = lower_percentile - (1.5 * IQR)
-
-                        filtered_points_df = filtered_points_df.loc[(filtered_points_df[dim] > lower_bound) & (filtered_points_df[dim] < upper_bound)]
-                        if debug:
-                            print('[DEBUG] Removing outliers in {}:'.format(dim))
-                            print('[DEBUG] Number of remaining points:', len(filtered_points_df))
-
-                    points_array = np.array(filtered_points_df)
+                    points_array = object_points_dict['taskboard']
 
                     # # + For testing only: rotate PC data:
                     # # Rotate PC about Z-Axis:
