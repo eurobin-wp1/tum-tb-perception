@@ -309,11 +309,12 @@ if __name__ == '__main__':
                         object_msg = Object(label=label, pose=Pose(position=Point(*object_position), 
                                                                    orientation=Quaternion(0., 0., 0., 1.)))
                         object_msg.header.frame_id = current_camera_info_msg_.header.frame_id
+
                         object_list_msg.objects.append(object_msg)
 
                         marker_msg, \
                             text_marker_msg = get_point_markers(object_position, 
-                                                                frame_id='camera_color_optical_frame', 
+                                                                frame_id=current_camera_info_msg_.header.frame_id,
                                                                 label=object_msg.label, 
                                                                 color_value=class_colors_dict[object_msg.label])
 
