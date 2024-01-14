@@ -313,10 +313,12 @@ if __name__ == '__main__':
                         object_list_msg.objects.append(object_msg)
 
                         marker_msg, \
-                            text_marker_msg = get_point_markers(object_position, 
-                                                                frame_id=current_camera_info_msg_.header.frame_id,
-                                                                label=object_msg.label, 
-                                                                color_value=class_colors_dict[object_msg.label])
+                            text_marker_msg = get_point_markers(
+                                    object_position,
+                                    frame_id=current_camera_info_msg_.header.frame_id,
+                                    label=object_msg.label,
+                                    color_value=class_colors_dict[object_msg.label]
+                        )
 
                         marker_array_msg.markers.append(marker_msg)
                         marker_array_msg.markers.append(text_marker_msg)
@@ -408,10 +410,14 @@ if __name__ == '__main__':
                     centroid = points_array.mean(axis=0)
                     if debug:
                         marker_array_msg = MarkerArray()
-                        marker_msg, text_marker_msg = get_point_markers(centroid, frame_id='camera_depth_optical_frame', 
-                                                                        label='Centroid', color_value=(0., 0., 0.))
-                        # marker_msg, text_marker_msg = get_point_markers(centroid, frame_id='camera_color_optical_frame', 
-                        #                                                 label='Centroid', color_value=(0., 0., 0.))
+                        marker_msg, \
+                            text_marker_msg = get_point_markers(
+                                    centroid,
+                                    frame_id=current_camera_info_msg_.header.frame_id,
+                                    # frame_id='camera_depth_optical_frame',
+                                    label='Centroid',
+                                    color_value=(0., 0., 0.)
+                        )
 
                         marker_array_msg.markers.append(marker_msg)
                         marker_array_msg.markers.append(text_marker_msg)
@@ -709,7 +715,8 @@ if __name__ == '__main__':
             if orientation_quaternion is not None:
                 tf_msg = TransformStamped()
                 tf_msg.header.stamp = rospy.Time.now()
-                tf_msg.header.frame_id = 'camera_depth_optical_frame'
+                tf_msg.header.frame_id = current_camera_info_msg_.header.frame_id
+                # tf_msg.header.frame_id = 'camera_depth_optical_frame'
                 tf_msg.child_frame_id = taskboard_frame_name
                 tf_msg.transform.translation = Vector3(*centroid)
                 tf_msg.transform.rotation = Quaternion(*orientation_quaternion)
