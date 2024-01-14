@@ -451,6 +451,7 @@ if __name__ == '__main__':
 
                     # Get 3D point cloud segment corresponding to the taskboard:
                     points_array = object_points_dict['taskboard']
+                    tb_position = object_positions_dict['taskboard']
 
                     # # + For testing only: rotate PC data:
                     # # Rotate PC about Z-Axis:
@@ -469,22 +470,6 @@ if __name__ == '__main__':
                     # for object_id, position_array in object_positions_dict.items():
                     #     object_positions_dict[object_id] = position_array @ rot_matrix
 
-                    centroid = points_array.mean(axis=0)
-                    if debug:
-                        marker_array_msg = MarkerArray()
-                        marker_msg, \
-                            text_marker_msg = get_point_markers(
-                                    centroid,
-                                    frame_id=current_camera_info_msg_.header.frame_id,
-                                    # frame_id='camera_depth_optical_frame',
-                                    label='Centroid',
-                                    color_value=(0., 0., 0.)
-                        )
-
-                        marker_array_msg.markers.append(marker_msg)
-                        marker_array_msg.markers.append(text_marker_msg)
-
-                        object_marker_publisher.publish(marker_array_msg)
 
                     ## ----------------------------------------
                     ## Extracting Normal of Best-Fit Plane:
@@ -581,7 +566,7 @@ if __name__ == '__main__':
                     tb_orientation_matrix = reorientation_matrix @ tb_orientation_matrix
 
                     tb_tf_matrix = np.hstack((np.vstack((tb_orientation_matrix, np.zeros(3))), np.array([[0, 0, 0, 1]]).T))
-                    # tb_tf_matrix = np.hstack((np.vstack((tb_orientation_matrix, np.zeros(3))), np.array([[centroid[0], centroid[1], centroid[2], 1]]).T))
+                    # tb_tf_matrix = np.hstack((np.vstack((tb_orientation_matrix, np.zeros(3))), np.array([[tb_position[0], tb_position[1], tb_position[2], 1]]).T))
 
                     # Compute and normalize orientation quaternion:
                     orientation_quaternion = tf_conversions.transformations.quaternion_from_matrix(tb_tf_matrix)
@@ -605,7 +590,7 @@ if __name__ == '__main__':
                         print(orientation_vectors[1, :])
 
                         print('\n[DEBUG] Taskboard orientation matrix:'); print(tb_orientation_matrix)
-                        print('[DEBUG] Taskboard surface centroid position:'); print(centroid)
+                        print('[DEBUG] Taskboard surface tb_position position:'); print(tb_position)
 
                     elapsed_time = time.time() - tb_orientation_estimation_start_time
                     rospy.loginfo(f'[pose_estimator] Estimated taskboard orientation in {elapsed_time:.2f}s')
@@ -646,15 +631,12 @@ if __name__ == '__main__':
                         # Best-fit plane's normal vector:
                         scale = arrow_scale_factor
                         end_point = plane_normal_eigh * scale
-                        ax.arrow3D(*centroid, *end_point, mutation_scale=10)
+                        ax.arrow3D(*tb_position, *end_point, mutation_scale=10)
                         ax.annotate3D('Plane Normal',
-                                      xyz=end_point + centroid + (scale * .0),
+                                      xyz=end_point + tb_position + (scale * .0),
                                       xytext=(0., 0.),
                                       textcoords='offset points',
                                       ha='left', va='bottom')
-
-                        # Visualize taskboard centroid:
-                        ax.scatter(*centroid, label='Centroid', c='tab:orange', s=6.0)
 
                         # Visualize best-fit plane representation:
                         plane_bounds = list(zip(points_array.min(axis=(0))[:2],
@@ -662,7 +644,7 @@ if __name__ == '__main__':
                         xx, yy = np.meshgrid(np.linspace(plane_bounds[0][0], plane_bounds[0][1], 10),
                                              np.linspace(plane_bounds[1][0], plane_bounds[1][1], 10))
                         A, B, C = plane_normal_eigh
-                        D = -centroid @ plane_normal_eigh
+                        D = -tb_position @ plane_normal_eigh
                         zz = (-(A * xx) - (B * yy) - D) / C
                         ax.plot_surface(xx, yy, zz, alpha=0.3, facecolor='grey',
                                         color='black', cstride=3, rstride=3,)
@@ -676,7 +658,7 @@ if __name__ == '__main__':
                             rect_corners_naive = minimum_bounding_rectangle(points_array[:, :2])
                             rect_corners_aug = np.vstack((rect_corners_naive, rect_corners_naive[0, :]))
                             rect_corners_aug = np.hstack((rect_corners_aug,
-                                                      np.ones((rect_corners_aug.shape[0], 1)) * centroid[2]))
+                                                      np.ones((rect_corners_aug.shape[0], 1)) * tb_position[2]))
                             ax.plot(rect_corners_aug[:, 0], rect_corners_aug[:, 1], rect_corners_aug[:, 2],
                                      color='black', label='Best-Fit Rectangle (Naive)')
 
@@ -747,7 +729,7 @@ if __name__ == '__main__':
                             head_width = 0.01 if side_found else 0.
                             arrowstyle = '->' if side_found else '-'
 
-                            ax.arrow3D(*centroid, *end_point, mutation_scale=10, arrowstyle=arrowstyle)
+                            ax.arrow3D(*tb_position, *end_point, mutation_scale=10, arrowstyle=arrowstyle)
 
                         # Visualized detected objects' positions:
                         for object_id, position_array in object_positions_dict.items():
@@ -782,7 +764,7 @@ if __name__ == '__main__':
                 tf_msg.header.frame_id = current_camera_info_msg_.header.frame_id
                 # tf_msg.header.frame_id = 'camera_depth_optical_frame'
                 tf_msg.child_frame_id = taskboard_frame_name
-                tf_msg.transform.translation = Vector3(*centroid)
+                tf_msg.transform.translation = Vector3(*tb_position)
                 tf_msg.transform.rotation = tb_quaternion
                 tf_broadcaster.sendTransform(tf_msg)
 
