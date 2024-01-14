@@ -2,6 +2,12 @@
 
 """
 Estimates the 3D positions of objects from image bounding boxes (BBs) and depth data.
+
+Note: this component was designed for and tested with an Intel Realsense D435
+sensor. In particular, it expects messages to be published on the following 
+topics (configurable through launch parameters):
+    - /camera/depth/color/points (PointCloud2)
+    - /camera/color/camera_info  (CameraInfo)
 """
 
 import os
