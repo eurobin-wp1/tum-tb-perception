@@ -711,20 +711,46 @@ if __name__ == '__main__':
                                   'Skipping pose estimation for this detection result...')
                 current_detection_msg_ = None
 
-            # Broadcast estimated taskboard frame:
             if orientation_quaternion is not None:
+                # Broadcast estimated taskboard frame:
+                tb_quaternion = Quaternion(*orientation_quaternion)
+
                 tf_msg = TransformStamped()
                 tf_msg.header.stamp = rospy.Time.now()
                 tf_msg.header.frame_id = current_camera_info_msg_.header.frame_id
                 # tf_msg.header.frame_id = 'camera_depth_optical_frame'
                 tf_msg.child_frame_id = taskboard_frame_name
                 tf_msg.transform.translation = Vector3(*centroid)
-                tf_msg.transform.rotation = Quaternion(*orientation_quaternion)
-
+                tf_msg.transform.rotation = tb_quaternion
                 tf_broadcaster.sendTransform(tf_msg)
 
                 # TODO: Create TF to visualize taskboard_frame wrt dummy_link:
                 # tf_msg_test = TransformStamped()
+
+                # Re-publish objects list after adding orientations, and
+                # broadcast a frame for each:
+                updated_object_list_msg = ObjectList()
+
+                object_marker_id = 0
+                for object_msg in object_list_msg.objects:
+                    label = object_msg.label
+                    if label == 'taskboard':
+                        continue
+                    object_msg.pose.orientation = tb_quaternion
+                    updated_object_list_msg.objects.append(object_msg)
+
+                    tf_msg = TransformStamped()
+                    tf_msg.header.stamp = rospy.Time.now()
+                    tf_msg.header.frame_id = current_camera_info_msg_.header.frame_id
+                    # tf_msg.header.frame_id = 'camera_depth_optical_frame'
+                    tf_msg.child_frame_id = label + '_frame'
+                    tf_msg.transform.translation = Vector3(object_msg.pose.position.x,
+                                                           object_msg.pose.position.y,
+                                                           object_msg.pose.position.z)
+                    tf_msg.transform.rotation = tb_quaternion
+                    tf_broadcaster.sendTransform(tf_msg)
+
+                object_list_publisher.publish(updated_object_list_msg)
 
             rate.sleep()
     except (KeyboardInterrupt, rospy.ROSInterruptException):
