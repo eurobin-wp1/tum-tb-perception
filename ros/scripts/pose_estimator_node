@@ -144,16 +144,15 @@ def get_point_cloud_segments(pointcloud2_msg, detection_result_msg, camera_info_
 
     return object_points_dict, cropped_pc_msg
 
-def estimate_object_positions(point_lists_dict, debug=False):
+def estimate_object_positions(point_arrays_dict, debug=False):
     """
     Estimates the 3D positions of objects from lists of corresponding points.
     By default, positions are estimated by the mean of the points.
 
     Parameters
     ----------
-    point_lists_dict: dict
-        Mapping between labels and lists of corresponding points (contained
-        in objects of type sensor_msgs.point_cloud2.Point).
+    point_arrays_dict: dict
+        Mapping between labels and ndarrays of corresponding points.
     debug: bool
         Whether to print some debugging messages
 
@@ -164,8 +163,7 @@ def estimate_object_positions(point_lists_dict, debug=False):
     """
     estimated_positions_dict = {}
 
-    for label in point_lists_dict.keys():
-        points_array = np.stack(point_lists_dict[label])
+    for label, points_array in point_arrays_dict.items():
         estimated_positions_dict[label] = points_array.mean(axis=0)
         if debug:
             print('[DEBUG] Label: {}'.format(label))
@@ -174,6 +172,29 @@ def estimate_object_positions(point_lists_dict, debug=False):
             print()
 
     return estimated_positions_dict 
+
+def convert_object_points_to_arrays(point_lists_dict):
+    """
+    Converts the the values of the given dict from lists of sensor_msgs.Point
+    to ndarrays containing all points of shape (num_points, 3).
+    This simplifies a few downstream operations.
+
+    Parameters
+    ----------
+    point_lists_dict: dict
+        Mapping between labels and lists of corresponding points (contained
+        in objects of type sensor_msgs.point_cloud2.Point).
+
+    Returns
+    -------
+    point_arrays_dict: dict
+        Mapping between labels and ndarrays of corresponding points.
+    """
+    point_arrays_dict = {}
+    for label in point_lists_dict.keys():
+        point_arrays_dict[label] = np.stack(point_lists_dict[label])
+
+    return point_arrays_dict 
 
 def get_point_markers(point, frame_id, label='', color_value=(0., 0., 0.)):
     """
@@ -304,7 +325,7 @@ if __name__ == '__main__':
                             cropped_pc_label='taskboard',
                             debug=debug
                     )
-
+                    object_points_dict = convert_object_points_to_arrays(object_points_dict, debug=debug)
                     object_positions_dict = estimate_object_positions(object_points_dict, debug=debug)
 
                     object_list_msg = ObjectList()
