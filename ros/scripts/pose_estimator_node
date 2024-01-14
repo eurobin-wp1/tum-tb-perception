@@ -196,6 +196,54 @@ def convert_object_points_to_arrays(point_lists_dict):
 
     return point_arrays_dict 
 
+def remove_outliers(points_array, percentiles=(25, 75), debug=False):
+    """
+    Removes outliers from the given array of 3D points using the IQR method.
+    The percentiles that are used to compute the inter-quartile range can be
+    configured.
+    Assumes that the columns of points_array contain coodinates in the x, y,
+    and z axes.
+
+    Parameters
+    ----------
+    points_array: ndarray
+        3D position coordinates of a set of points
+    percentiles: tuple
+        Upper and lower percentiles for the IQR computation
+    debug: bool
+        Whether to print some debugging messages
+
+    Returns
+    -------
+    points_array: ndarray
+        3D position coordinates of a set of points post outlier removal
+    """
+    points_df = pd.DataFrame(data=points_array, columns=['x', 'y', 'z'])
+
+    if debug:
+        print('\n[DEBUG] Original points array shape:', points_array.shape)
+        print(f'[DEBUG] percentiles: {percentiles}')
+    for dim in ['x', 'y', 'z']:
+        lower_percentile = np.percentile(points_df[dim],
+                                         percentiles[0],
+                                         method='midpoint')
+        upper_percentile = np.percentile(points_df[dim],
+                                         percentiles[1],
+                                         method='midpoint')
+        IQR = upper_percentile - lower_percentile
+        upper_bound = upper_percentile + (1.5 * IQR)
+        lower_bound = lower_percentile - (1.5 * IQR)
+
+        points_df = points_df.loc[(points_df[dim] >= lower_bound) & \
+                                  (points_df[dim] <= upper_bound)]
+        if debug:
+            print('[DEBUG] Removing outliers in {}:'.format(dim))
+            print('[DEBUG] Number of remaining points:', len(points_df))
+
+    points_array = np.array(points_df)
+
+    return points_array
+
 def get_point_markers(point, frame_id, label='', color_value=(0., 0., 0.)):
     """
     Creates RViz position and text markers for a given 3D point.
@@ -246,13 +294,6 @@ def get_point_markers(point, frame_id, label='', color_value=(0., 0., 0.)):
     object_marker_id += 1
 
     return marker_msg, text_marker_msg
-
-# TODO: Consider implementing the following to improve position estimates of the taskboard:
-# TODO: most likely IQR-based outlier removal
-# def remove_outliers(points_array):
-#     """TODO
-#     """
-#     pass
 
 
 if __name__ == '__main__':
