@@ -287,12 +287,17 @@ if __name__ == '__main__':
                     position_estimation_start_time = time.time()
 
                     cropped_pc_msg = PointCloud()
-                    cropped_pc_msg.header.frame_id = current_pc2_msg_.header.frame_id
+                    cropped_pc_msg.header.frame_id = current_camera_info_msg_.header.frame_id
                     cropped_pc_msg.header.stamp = current_pc2_msg_.header.stamp
 
-                    object_points_dict, cropped_pc = get_point_cloud_segments(current_pc2_msg_, current_detection_msg_, 
-                                                                              current_camera_info_msg_, 
-                                                                              cropped_pc_msg=cropped_pc_msg, debug=debug)
+                    object_points_dict, cropped_pc = get_point_cloud_segments(
+                            pointcloud2_msg=current_pc2_msg_,
+                            detection_result_msg=current_detection_msg_,
+                            camera_info_msg=current_camera_info_msg_,
+                            cropped_pc_msg=cropped_pc_msg,
+                            cropped_pc_label='taskboard',
+                            debug=debug
+                    )
 
                     object_positions_dict = estimate_object_positions(object_points_dict, debug=debug)
 
