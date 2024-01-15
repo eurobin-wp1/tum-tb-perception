@@ -340,7 +340,7 @@ if __name__ == '__main__':
 
         if rospy.is_shutdown():
             rospy.loginfo('[pose_estimator] Stopping node...')
-            sys.exit()
+            sys.exit(0)
 
     class_colors_dict = load_class_color_map(class_colors_file_path)
     orientation_quaternion = None

@@ -67,10 +67,10 @@ if __name__ == '__main__':
         rospy.loginfo('[single_cnn_detector] Will run model on {}'.format(device))
     else:
         rospy.logerr('[single_cnn_detector] Invalid value for device parameter! Must be one of {}'.format(supported_torch_devices_))
-        sys.exit()
+        sys.exit(1)
     if device == 'gpu' and not torch.cuda.is_available():
         rospy.logerr('[single_cnn_detector] Could not detect gpu device! Terminating.')
-        sys.exit()
+        sys.exit(1)
 
     ## ----------------------------------------------------------------------
     ## CNN Initializations:
@@ -100,7 +100,7 @@ if __name__ == '__main__':
         except CvBridgeError as e:
             rospy.logerr('[single_cnn_detector] Failed to convert image message to opencv format!')
             print('Error:', e)
-            sys.exit()
+            sys.exit(1)
 
         detection_start_time = time.time()
 
@@ -179,4 +179,4 @@ if __name__ == '__main__':
         rospy.loginfo('[single_cnn_detector] Stopping node')
         if display_output:
             cv2.destroyAllWindows()
-        sys.exit()
+        sys.exit(0)
