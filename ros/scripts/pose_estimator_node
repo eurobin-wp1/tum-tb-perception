@@ -478,6 +478,10 @@ if __name__ == '__main__':
                     # Get best-fit plane normal:
                     eigenvectors_eigh = np.linalg.eigh(np.cov(points_array.T))[1]
                     plane_normal_eigh = eigenvectors_eigh[:, 0]
+                    # If z coordinate is negative, invert the vector to rectify
+                    # the resultant axes:
+                    if plane_normal_eigh[2] < 0.:
+                        plane_normal_eigh = -plane_normal_eigh 
 
                     ## ----------------------------------------
                     ## Fitting Minimum Bounding Rectangle on Planar Data:
