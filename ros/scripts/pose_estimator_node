@@ -576,6 +576,23 @@ if __name__ == '__main__':
                         rospy.logwarn('[pose_estimator] Can not determine right/left side of board!')
                         orientation_vector_1 = rect_corners[1, :] - rect_corners[0, :]
 
+                    if debug:
+                        print('\n[DEBUG] Rectangle Corners:')
+                        print(rect_corners)
+                        print('[DEBUG] Quadrant Corner ID Candidates:')
+                        print(quadrant_corner_id_candidates)
+
+                        print('\n[DEBUG] Quadrant corner IDs:', quadrant_corner_ids)
+                        print('[DEBUG] Corner quadrant IDs:', corner_quadrant_ids)
+
+                        print('\n[DEBUG] Estimated best-fit plane normal vector:')
+                        print(plane_normal_eigh)
+
+                        print('\n[DEBUG] Orientation vector 1 (unnormalized):')
+                        print(orientation_vector_1)
+                        print('[DEBUG] Orientation vector 2 (unnormalized):')
+                        print(orientation_vector_2)
+
                     orientation_vectors = np.stack((orientation_vector_1 / np.linalg.norm(orientation_vector_1),
                                                     orientation_vector_2 / np.linalg.norm(orientation_vector_2)))
 
@@ -592,21 +609,16 @@ if __name__ == '__main__':
                     # tb_tf_matrix = np.hstack((np.vstack((tb_orientation_matrix, np.zeros(3))), np.array([[tb_position[0], tb_position[1], tb_position[2], 1]]).T))
 
                     # Compute and normalize orientation quaternion:
-                    orientation_quaternion = tf_conversions.transformations.quaternion_from_matrix(tb_tf_matrix)
-                    orientation_quaternion /= np.linalg.norm(orientation_quaternion)
+                    if vertical_side_found and horizontal_side_found:
+                        orientation_quaternion = tf_conversions.transformations.quaternion_from_matrix(tb_tf_matrix)
+                        orientation_quaternion /= np.linalg.norm(orientation_quaternion)
+                    else:
+                        rospy.logwarn('[pose_estimator] Could not sufficiently ' + \
+                                      'determine taskboard orientation.')
+                        rospy.logwarn('[pose_estimator] Will not publish ' + \
+                                      ' {taskboard_frame_name}.')
 
                     if debug:
-                        print('\n[DEBUG] Rectangle Corners:')
-                        print(rect_corners)
-                        print('[DEBUG] Quadrant Corner ID Candidates:')
-                        print(quadrant_corner_id_candidates)
-
-                        print('\n[DEBUG] Quadrant corner IDs:', quadrant_corner_ids)
-                        print('[DEBUG] Corner quadrant IDs:', corner_quadrant_ids)
-
-                        print('\n[DEBUG] Estimated best-fit plane normal vector:')
-                        print(plane_normal_eigh)
-
                         print('\n[DEBUG] Orientation vector 1 (normalized):')
                         print(orientation_vectors[0, :])
                         print('[DEBUG] Orientation vector 2 (normalized):')
