@@ -59,6 +59,8 @@ def camera_info_callback(msg):
     global current_camera_info_msg_ 
     current_camera_info_msg_ = msg
 
+object_list_publisher_ = None
+
 ## ----------------------------------------------------------------------
 ## Functions:
 ## ----------------------------------------------------------------------
@@ -295,6 +297,21 @@ def get_point_markers(point, frame_id, label='', color_value=(0., 0., 0.)):
 
     return marker_msg, text_marker_msg
 
+def clear_object_markers():
+    """
+    Clears all current RViz object markers.
+
+    Parameters
+    -------
+    None
+
+    Returns
+    -------
+    None
+    """
+    global object_list_publisher_
+    object_list_publisher_.publish(ObjectList())
+
 
 if __name__ == '__main__':
     ## ----------------------------------------------------------------------
@@ -324,7 +341,7 @@ if __name__ == '__main__':
     detector_result_subscriber = rospy.Subscriber(detector_result_topic, BoundingBoxList, detection_callback)
     camera_info_subscriber = rospy.Subscriber(camera_info_topic, CameraInfo, camera_info_callback)
 
-    object_list_publisher = rospy.Publisher(object_list_pub_topic, ObjectList, queue_size=10)
+    object_list_publisher_ = rospy.Publisher(object_list_pub_topic, ObjectList, queue_size=10)
     object_marker_publisher = rospy.Publisher(object_marker_pub_topic, MarkerArray, queue_size=10)
     cropped_pc_debug_publisher = rospy.Publisher(cropped_pc_pub_topic, PointCloud, queue_size=10)
 
@@ -350,6 +367,8 @@ if __name__ == '__main__':
         while not rospy.is_shutdown():
             if current_detection_msg_ is not None:
                 if current_pc2_msg_ is not None:
+                    clear_object_markers()
+
                     rospy.loginfo('[pose_estimator] Received detection result message.')
                     rospy.loginfo('[pose_estimator] Estimating detected object positions...')
                     position_estimation_start_time = time.time()
@@ -407,7 +426,7 @@ if __name__ == '__main__':
                         marker_array_msg.markers.append(marker_msg)
                         marker_array_msg.markers.append(text_marker_msg)
 
-                    object_list_publisher.publish(object_list_msg)
+                    object_list_publisher_.publish(object_list_msg)
                     object_marker_publisher.publish(marker_array_msg)
 
                     cropped_pc_debug_publisher.publish(cropped_pc_msg)
@@ -798,7 +817,7 @@ if __name__ == '__main__':
                     tf_msg.transform.rotation = tb_quaternion
                     tf_broadcaster.sendTransform(tf_msg)
 
-                object_list_publisher.publish(updated_object_list_msg)
+                object_list_publisher_.publish(updated_object_list_msg)
 
             rate.sleep()
     except (KeyboardInterrupt, rospy.ROSInterruptException):
