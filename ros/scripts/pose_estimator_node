@@ -580,32 +580,63 @@ if __name__ == '__main__':
                             corner_id = np.linalg.norm(rect_rectified_corners - position_array, axis=1).argmin()
                             object_nearest_corner_dict[object_id] = corner_id
 
-                        quadrant_corner_id_candidates = {'1': [], '2': [], '3': [], '4': []}
-                        if 'red_button' in object_nearest_corner_dict.keys():
-                            quadrant_corner_id_candidates['1'].append(object_nearest_corner_dict['red_button'])
-                        if 'blue_button' in object_nearest_corner_dict.keys():
-                            quadrant_corner_id_candidates['1'].append(object_nearest_corner_dict['blue_button'])
-                        if 'multimeter_connector' in object_nearest_corner_dict.keys():
-                            quadrant_corner_id_candidates['1'].append(object_nearest_corner_dict['multimeter_connector'])
-                        if 'multimeter_probe' in object_nearest_corner_dict.keys():
-                            quadrant_corner_id_candidates['2'].append(object_nearest_corner_dict['multimeter_probe'])
-                        if 'hatch_handle' in object_nearest_corner_dict.keys():
-                            quadrant_corner_id_candidates['2'].append(object_nearest_corner_dict['hatch_handle'])
-                        if 'lcd' in object_nearest_corner_dict.keys():
-                            quadrant_corner_id_candidates['4'].append(object_nearest_corner_dict['lcd'])
-                        if 'slider' in object_nearest_corner_dict.keys():
-                            quadrant_corner_id_candidates['4'].append(object_nearest_corner_dict['slider'])
-
+                        ## Updated direction estimation algorithm:
                         quadrant_corner_ids = {}
-                        for quadrant_id, corner_candidate_list in quadrant_corner_id_candidates.items():
-                            try:
-                                quadrant_corner_ids[quadrant_id] = max(set(corner_candidate_list), key=corner_candidate_list.count)
-                            except ValueError:
-                                quadrant_corner_ids[quadrant_id] = None
+                        if 'red_button' in object_nearest_corner_dict.keys():
+                            quadrant_corner_ids['1'] = object_nearest_corner_dict['red_button']
+                        elif 'blue_button' in object_nearest_corner_dict.keys():
+                            quadrant_corner_ids['1'] = object_nearest_corner_dict['blue_button']
+                        elif 'multimeter_connector' in object_nearest_corner_dict.keys():
+                            quadrant_corner_ids['1'] = object_nearest_corner_dict['multimeter_connector']
+                        else:
+                            rospy.logerr('[pose_estimator] Could not locate quadrant 1!')
+                            quadrant_corner_ids['1'] = None
+
+                        if 'hatch_handle' in object_nearest_corner_dict.keys():
+                            quadrant_corner_ids['2'] = object_nearest_corner_dict['hatch_handle']
+                        elif 'multimeter_probe' in object_nearest_corner_dict.keys():
+                            quadrant_corner_ids['2'] = object_nearest_corner_dict['multimeter_probe']
+                        else:
+                            rospy.logerr('[pose_estimator] Could not locate quadrant 2!')
+                            quadrant_corner_ids['2'] = None
+
+                        if 'lcd' in object_nearest_corner_dict.keys():
+                            quadrant_corner_ids['4'] = object_nearest_corner_dict['lcd']
+                        elif 'slider' in object_nearest_corner_dict.keys():
+                            quadrant_corner_ids['4'] = object_nearest_corner_dict['slider']
+                        else:
+                            rospy.logerr('[pose_estimator] Could not locate quadrant 4!')
+                            quadrant_corner_ids['4'] = None
+
+                        if quadrant_corner_ids['4'] == None or \
+                                quadrant_corner_ids['4'] == quadrant_corner_ids['1'] or \
+                                quadrant_corner_ids['4'] == quadrant_corner_ids['2']:
+                            rospy.logerr('[pose_estimator] Using test heuristic to determine quadrant 4...')
+                            q1_coordinates = rect_rectified_corners[quadrant_corner_ids['1']]
+                            q2_coordinates = rect_rectified_corners[quadrant_corner_ids['2']]
+                            corner_distances = np.linalg.norm(rect_rectified_corners - q1_coordinates, axis=1)
+                            corner_distances[quadrant_corner_ids['1']] = np.inf
+                            corner_distances[quadrant_corner_ids['2']] = np.inf
+
+                            quadrant_corner_ids['4'] = corner_distances.argmin()
+
+                        quadrant_corner_ids['3'] = None
                         corner_quadrant_ids = dict(zip(quadrant_corner_ids.values(), quadrant_corner_ids.keys()))
 
                         # TODO: Remove convenience data copy:
                         rect_corners = rect_rectified_corners.copy()
+
+                        if debug:
+                            print('\n[DEBUG] Rectangle Corners:')
+                            print(rect_corners)
+                            # print('[DEBUG] Quadrant Corner ID Candidates:')
+                            # print(quadrant_corner_id_candidates)
+
+                            print('\n[DEBUG] Quadrant corner IDs:', quadrant_corner_ids)
+                            print('[DEBUG] Corner quadrant IDs:', corner_quadrant_ids)
+
+                            print('\n[DEBUG] Estimated best-fit plane normal vector:')
+                            print(plane_normal_eigh)
 
                         # Estimate first orientation vector:
                         if quadrant_corner_ids['1'] is not None and quadrant_corner_ids['2'] is not None:
@@ -630,17 +661,6 @@ if __name__ == '__main__':
                             orientation_vector_1 = rect_corners[1, :] - rect_corners[0, :]
 
                         if debug:
-                            print('\n[DEBUG] Rectangle Corners:')
-                            print(rect_corners)
-                            print('[DEBUG] Quadrant Corner ID Candidates:')
-                            print(quadrant_corner_id_candidates)
-
-                            print('\n[DEBUG] Quadrant corner IDs:', quadrant_corner_ids)
-                            print('[DEBUG] Corner quadrant IDs:', corner_quadrant_ids)
-
-                            print('\n[DEBUG] Estimated best-fit plane normal vector:')
-                            print(plane_normal_eigh)
-
                             print('\n[DEBUG] Orientation vector 1 (unnormalized):')
                             print(orientation_vector_1)
                             print('[DEBUG] Orientation vector 2 (unnormalized):')
