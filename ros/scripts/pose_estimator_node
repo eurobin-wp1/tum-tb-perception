@@ -410,8 +410,8 @@ if __name__ == '__main__':
     try:
         while not rospy.is_shutdown():
             if current_detection_msg_ is not None:
+                clear_object_markers()
                 if current_pc2_msg_ is not None:
-                    clear_object_markers()
 
                     rospy.loginfo('[pose_estimator] Received detection result message.')
                     rospy.loginfo('[pose_estimator] Estimating detected object positions...')
@@ -835,7 +835,7 @@ if __name__ == '__main__':
 
                 else:
                     rospy.logwarn('[pose_estimator] Could not get a pointcloud message from topic {}!'.format(pointcloud_topic) + \
-                                  'Skipping pose estimation for this detection result...')
+                                  ' Skipping pose estimation for this detection result...')
                 current_detection_msg_ = None
 
             if orientation_quaternion is not None:
