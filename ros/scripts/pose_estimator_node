@@ -23,6 +23,7 @@ import tf_conversions
 import numpy as np
 import pandas as pd
 import sensor_msgs.point_cloud2 as pc2
+from sklearn.cluster import AgglomerativeClustering
 
 from geometry_msgs.msg import Point, Pose, Quaternion, Vector3, TransformStamped
 from sensor_msgs.msg import PointCloud, PointCloud2, CameraInfo
@@ -243,6 +244,49 @@ def remove_outliers(points_array, percentiles=(25, 75), debug=False):
             print('[DEBUG] Number of remaining points:', len(points_df))
 
     points_array = np.array(points_df)
+
+    return points_array
+
+def remove_outliers_agglomerative(points_array, debug=False):
+    """
+    TODO
+
+    Parameters
+    ----------
+    points_array: ndarray
+        3D position coordinates of a set of points
+    debug: bool
+        Whether to print some debugging messages
+
+    Returns
+    -------
+    points_array: ndarray
+        3D position coordinates of a set of points post outlier removal
+    """
+    n_clusters = 2
+    model = AgglomerativeClustering(n_clusters=n_clusters,
+                                    linkage='single',
+                                    metric='cityblock')
+    point_indices = model.fit_predict(points_array)
+    cluster_points = dict(zip(np.arange(n_clusters),
+                              [points_array[point_indices == cluster_id] \
+                               for cluster_id in range(n_clusters)]))
+    num_points_dict = dict(zip(list(cluster_points.keys()),
+                               [cluster_points[cluster_id].shape[0] \
+                                for cluster_id in range(n_clusters)]))
+
+    # Select cluster with larger number of points as inlier:
+    inlier_cluster_index = np.argmax(list(num_points_dict.values()))
+
+    points_array = cluster_points[inlier_cluster_index]
+
+    if debug:
+        print('\n[DEBUG] Original points array shape:', points_array.shape)
+        for cluster_id in range(n_clusters):
+            print(f'[DEBUG] No. of points in cluster {cluster_id}: {num_points_dict[cluster_id]}')
+
+        print(f'[DEBUG] Selecting cluster {inlier_cluster_index} as inlier')
+        print(f'[DEBUG] Number of remaining points:', points_array.shape[0])
 
     return points_array
 
@@ -489,6 +533,10 @@ if __name__ == '__main__':
                     # for object_id, position_array in object_positions_dict.items():
                     #     object_positions_dict[object_id] = position_array @ rot_matrix
 
+                    rospy.loginfo(f'[pose_estimator] Removing TB PC outliers' + \
+                                  f' using agglomerative clustering...')
+                    points_array = remove_outliers_agglomerative(points_array, 
+                                                                 debug=debug)
 
                     ## ----------------------------------------
                     ## Extracting Normal of Best-Fit Plane:
