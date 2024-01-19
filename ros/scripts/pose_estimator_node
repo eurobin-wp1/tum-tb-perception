@@ -370,6 +370,7 @@ if __name__ == '__main__':
     output_dir_path = rospy.get_param('~output_dir_path', 
                                       os.path.join(package_path, 'output_data'))
     taskboard_frame_name = rospy.get_param('~taskboard_frame_name', 'taskboard_frame')
+    num_retries = rospy.get_param('~num_retries', 3)
 
     pointcloud_topic = rospy.get_param('~pointcloud_topic', '/camera/depth/color/points')
     camera_info_topic = rospy.get_param('~camera_info_topic', '/camera/color/camera_info')
@@ -492,191 +493,206 @@ if __name__ == '__main__':
                             pickle.dump(object_positions_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
                         np.save(os.path.join(output_dir_path, 'pose_estimator_taskboard_points.npy'), np.stack(object_points_dict['taskboard']))
 
-                    tb_orientation_estimation_start_time = time.time()
 
-                    ## ----------------------------------------------------------------------
-                    ## Orientation Estimation Test Program:
-                    ## ----------------------------------------------------------------------
 
-                    ## ----------------------------------------
-                    ## Parameters and Variables:
-                    ## ----------------------------------------
+                    for attempt_id in range(num_retries):
 
-                    arrow_scale_factor = 0.2
-                    hide_pc_points = False
-                    plot_fitted_rectangle, plot_fitted_rectified_rectangle = True, True
+                        tb_orientation_estimation_start_time = time.time()
 
-                    vertical_side_found, horizontal_side_found = False, False
+                        ## ----------------------------------------------------------------------
+                        ## Orientation Estimation Test Program:
+                        ## ----------------------------------------------------------------------
 
-                    ## ----------------------------------------
-                    ## Data Loading and Preprocessing:
-                    ## ----------------------------------------
+                        ## ----------------------------------------
+                        ## Parameters and Variables:
+                        ## ----------------------------------------
 
-                    # Get 3D point cloud segment corresponding to the taskboard:
-                    points_array = object_points_dict['taskboard']
-                    tb_position = object_positions_dict['taskboard']
+                        arrow_scale_factor = 0.2
+                        hide_pc_points = False
+                        plot_fitted_rectangle, plot_fitted_rectified_rectangle = True, True
 
-                    # # + For testing only: rotate PC data:
-                    # # Rotate PC about Z-Axis:
-                    # rot_angle = np.deg2rad(270)
-                    # rot_matrix = np.array([[np.cos(rot_angle), -np.sin(rot_angle), 0],
-                    #                        [np.sin(rot_angle), np.cos(rot_angle), 0],
-                    #                        [0, 0, 1]])
-                    # # # Rotate PC about X-Axis:
-                    # # rot_angle = np.deg2rad(20)
-                    # # rot_matrix = np.array([[1, 0, 0],
-                    # #                        [0, np.cos(rot_angle), -np.sin(rot_angle)],
-                    # #                        [0, np.sin(rot_angle), np.cos(rot_angle)]])
-                    # points_array = points_array @ rot_matrix
+                        vertical_side_found, horizontal_side_found = False, False
 
-                    # # + For testing only: rectify object positions (for flipped PC, etc.) and rotate:
-                    # for object_id, position_array in object_positions_dict.items():
-                    #     object_positions_dict[object_id] = position_array @ rot_matrix
+                        ## ----------------------------------------
+                        ## Data Loading and Preprocessing:
+                        ## ----------------------------------------
 
-                    rospy.loginfo(f'[pose_estimator] Removing TB PC outliers' + \
-                                  f' using agglomerative clustering...')
-                    points_array = remove_outliers_agglomerative(points_array, 
-                                                                 debug=debug)
+                        # Get 3D point cloud segment corresponding to the taskboard:
+                        points_array = object_points_dict['taskboard']
+                        tb_position = object_positions_dict['taskboard']
 
-                    ## ----------------------------------------
-                    ## Extracting Normal of Best-Fit Plane:
-                    ## ----------------------------------------
+                        # # + For testing only: rotate PC data:
+                        # # Rotate PC about Z-Axis:
+                        # rot_angle = np.deg2rad(270)
+                        # rot_matrix = np.array([[np.cos(rot_angle), -np.sin(rot_angle), 0],
+                        #                        [np.sin(rot_angle), np.cos(rot_angle), 0],
+                        #                        [0, 0, 1]])
+                        # # # Rotate PC about X-Axis:
+                        # # rot_angle = np.deg2rad(20)
+                        # # rot_matrix = np.array([[1, 0, 0],
+                        # #                        [0, np.cos(rot_angle), -np.sin(rot_angle)],
+                        # #                        [0, np.sin(rot_angle), np.cos(rot_angle)]])
+                        # points_array = points_array @ rot_matrix
 
-                    # Get best-fit plane normal:
-                    eigenvectors_eigh = np.linalg.eigh(np.cov(points_array.T))[1]
-                    plane_normal_eigh = eigenvectors_eigh[:, 0]
-                    # If z coordinate is negative, invert the vector to rectify
-                    # the resultant axes:
-                    if plane_normal_eigh[2] < 0.:
-                        plane_normal_eigh = -plane_normal_eigh 
+                        # # + For testing only: rectify object positions (for flipped PC, etc.) and rotate:
+                        # for object_id, position_array in object_positions_dict.items():
+                        #     object_positions_dict[object_id] = position_array @ rot_matrix
 
-                    ## ----------------------------------------
-                    ## Fitting Minimum Bounding Rectangle on Planar Data:
-                    ## ----------------------------------------
+                        rospy.loginfo(f'[pose_estimator] Removing TB PC outliers' + \
+                                      f' using agglomerative clustering...')
+                        points_array = remove_outliers_agglomerative(points_array, 
+                                                                     debug=debug)
 
-                    # Estimate minimum bounding rectangle on data projected onto best-fit plane:
-                    rot_matrix = rotation_matrix_from_vectors([0, 0, 1], plane_normal_eigh)
-                    points_oriented_array = points_array @ rot_matrix
+                        ## ----------------------------------------
+                        ## Extracting Normal of Best-Fit Plane:
+                        ## ----------------------------------------
 
-                    rect_oriented_corners = minimum_bounding_rectangle(points_oriented_array[:, :2])
-                    mid_point_oriented = points_oriented_array.mean(axis=0)
+                        # Get best-fit plane normal:
+                        eigenvectors_eigh = np.linalg.eigh(np.cov(points_array.T))[1]
+                        plane_normal_eigh = eigenvectors_eigh[:, 0]
+                        # If z coordinate is negative, invert the vector to rectify
+                        # the resultant axes:
+                        if plane_normal_eigh[2] < 0.:
+                            plane_normal_eigh = -plane_normal_eigh 
 
-                    rect_oriented_corners_aug = np.hstack((rect_oriented_corners,
-                                                  np.ones((rect_oriented_corners.shape[0], 1)) * mid_point_oriented[2]))
-                    rect_rectified_corners = rect_oriented_corners_aug @ rot_matrix.T
+                        ## ----------------------------------------
+                        ## Fitting Minimum Bounding Rectangle on Planar Data:
+                        ## ----------------------------------------
 
-                    ## ----------------------------------------
-                    ## Estimating Taskboard Orientation:
-                    ## ----------------------------------------
+                        # Estimate minimum bounding rectangle on data projected onto best-fit plane:
+                        rot_matrix = rotation_matrix_from_vectors([0, 0, 1], plane_normal_eigh)
+                        points_oriented_array = points_array @ rot_matrix
 
-                    # Localize quadrant corners using known detected objects:
-                    object_nearest_corner_dict = {}
-                    for object_id, position_array in object_positions_dict.items():
-                        corner_id = np.linalg.norm(rect_rectified_corners - position_array, axis=1).argmin()
-                        object_nearest_corner_dict[object_id] = corner_id
+                        rect_oriented_corners = minimum_bounding_rectangle(points_oriented_array[:, :2])
+                        mid_point_oriented = points_oriented_array.mean(axis=0)
 
-                    quadrant_corner_id_candidates = {'1': [], '2': [], '3': [], '4': []}
-                    if 'red_button' in object_nearest_corner_dict.keys():
-                        quadrant_corner_id_candidates['1'].append(object_nearest_corner_dict['red_button'])
-                    if 'blue_button' in object_nearest_corner_dict.keys():
-                        quadrant_corner_id_candidates['1'].append(object_nearest_corner_dict['blue_button'])
-                    if 'multimeter_connector' in object_nearest_corner_dict.keys():
-                        quadrant_corner_id_candidates['1'].append(object_nearest_corner_dict['multimeter_connector'])
-                    if 'multimeter_probe' in object_nearest_corner_dict.keys():
-                        quadrant_corner_id_candidates['2'].append(object_nearest_corner_dict['multimeter_probe'])
-                    if 'hatch_handle' in object_nearest_corner_dict.keys():
-                        quadrant_corner_id_candidates['2'].append(object_nearest_corner_dict['hatch_handle'])
-                    if 'lcd' in object_nearest_corner_dict.keys():
-                        quadrant_corner_id_candidates['4'].append(object_nearest_corner_dict['lcd'])
-                    if 'slider' in object_nearest_corner_dict.keys():
-                        quadrant_corner_id_candidates['4'].append(object_nearest_corner_dict['slider'])
+                        rect_oriented_corners_aug = np.hstack((rect_oriented_corners,
+                                                      np.ones((rect_oriented_corners.shape[0], 1)) * mid_point_oriented[2]))
+                        rect_rectified_corners = rect_oriented_corners_aug @ rot_matrix.T
 
-                    quadrant_corner_ids = {}
-                    for quadrant_id, corner_candidate_list in quadrant_corner_id_candidates.items():
-                        try:
-                            quadrant_corner_ids[quadrant_id] = max(set(corner_candidate_list), key=corner_candidate_list.count)
-                        except ValueError:
-                            quadrant_corner_ids[quadrant_id] = None
-                    corner_quadrant_ids = dict(zip(quadrant_corner_ids.values(), quadrant_corner_ids.keys()))
+                        ## ----------------------------------------
+                        ## Estimating Taskboard Orientation:
+                        ## ----------------------------------------
 
-                    # TODO: Remove convenience data copy:
-                    rect_corners = rect_rectified_corners.copy()
+                        # Localize quadrant corners using known detected objects:
+                        object_nearest_corner_dict = {}
+                        for object_id, position_array in object_positions_dict.items():
+                            corner_id = np.linalg.norm(rect_rectified_corners - position_array, axis=1).argmin()
+                            object_nearest_corner_dict[object_id] = corner_id
 
-                    # Estimate first orientation vector:
-                    if quadrant_corner_ids['1'] is not None and quadrant_corner_ids['2'] is not None:
-                        orientation_vector_2 = rect_corners[quadrant_corner_ids['1'], :] - rect_corners[quadrant_corner_ids['2'], :]
-                        horizontal_side_found = True
-                    elif quadrant_corner_ids['3'] is not None and quadrant_corner_ids['4'] is not None:
-                        orientation_vector_2 = rect_corners[quadrant_corner_ids['3'], :] - rect_corners[quadrant_corner_ids['4'], :]
-                        horizontal_side_found = True
+                        quadrant_corner_id_candidates = {'1': [], '2': [], '3': [], '4': []}
+                        if 'red_button' in object_nearest_corner_dict.keys():
+                            quadrant_corner_id_candidates['1'].append(object_nearest_corner_dict['red_button'])
+                        if 'blue_button' in object_nearest_corner_dict.keys():
+                            quadrant_corner_id_candidates['1'].append(object_nearest_corner_dict['blue_button'])
+                        if 'multimeter_connector' in object_nearest_corner_dict.keys():
+                            quadrant_corner_id_candidates['1'].append(object_nearest_corner_dict['multimeter_connector'])
+                        if 'multimeter_probe' in object_nearest_corner_dict.keys():
+                            quadrant_corner_id_candidates['2'].append(object_nearest_corner_dict['multimeter_probe'])
+                        if 'hatch_handle' in object_nearest_corner_dict.keys():
+                            quadrant_corner_id_candidates['2'].append(object_nearest_corner_dict['hatch_handle'])
+                        if 'lcd' in object_nearest_corner_dict.keys():
+                            quadrant_corner_id_candidates['4'].append(object_nearest_corner_dict['lcd'])
+                        if 'slider' in object_nearest_corner_dict.keys():
+                            quadrant_corner_id_candidates['4'].append(object_nearest_corner_dict['slider'])
+
+                        quadrant_corner_ids = {}
+                        for quadrant_id, corner_candidate_list in quadrant_corner_id_candidates.items():
+                            try:
+                                quadrant_corner_ids[quadrant_id] = max(set(corner_candidate_list), key=corner_candidate_list.count)
+                            except ValueError:
+                                quadrant_corner_ids[quadrant_id] = None
+                        corner_quadrant_ids = dict(zip(quadrant_corner_ids.values(), quadrant_corner_ids.keys()))
+
+                        # TODO: Remove convenience data copy:
+                        rect_corners = rect_rectified_corners.copy()
+
+                        # Estimate first orientation vector:
+                        if quadrant_corner_ids['1'] is not None and quadrant_corner_ids['2'] is not None:
+                            orientation_vector_2 = rect_corners[quadrant_corner_ids['1'], :] - rect_corners[quadrant_corner_ids['2'], :]
+                            horizontal_side_found = True
+                        elif quadrant_corner_ids['3'] is not None and quadrant_corner_ids['4'] is not None:
+                            orientation_vector_2 = rect_corners[quadrant_corner_ids['3'], :] - rect_corners[quadrant_corner_ids['4'], :]
+                            horizontal_side_found = True
+                        else:
+                            rospy.logwarn('[pose_estimator] Can not determine top/bottom of board!')
+                            orientation_vector_2 = rect_corners[2, :] - rect_corners[1, :]
+
+                        # Estimate first orientation vector:
+                        if quadrant_corner_ids['1'] is not None and quadrant_corner_ids['4'] is not None:
+                            orientation_vector_1 = rect_corners[quadrant_corner_ids['1'], :] - rect_corners[quadrant_corner_ids['4'], :]
+                            vertical_side_found = True
+                        elif quadrant_corner_ids['2'] is not None and quadrant_corner_ids['3'] is not None:
+                            orientation_vector_1 = rect_corners[quadrant_corner_ids['2'], :] - rect_corners[quadrant_corner_ids['3'], :]
+                            vertical_side_found = True
+                        else:
+                            rospy.logwarn('[pose_estimator] Can not determine right/left side of board!')
+                            orientation_vector_1 = rect_corners[1, :] - rect_corners[0, :]
+
+                        if debug:
+                            print('\n[DEBUG] Rectangle Corners:')
+                            print(rect_corners)
+                            print('[DEBUG] Quadrant Corner ID Candidates:')
+                            print(quadrant_corner_id_candidates)
+
+                            print('\n[DEBUG] Quadrant corner IDs:', quadrant_corner_ids)
+                            print('[DEBUG] Corner quadrant IDs:', corner_quadrant_ids)
+
+                            print('\n[DEBUG] Estimated best-fit plane normal vector:')
+                            print(plane_normal_eigh)
+
+                            print('\n[DEBUG] Orientation vector 1 (unnormalized):')
+                            print(orientation_vector_1)
+                            print('[DEBUG] Orientation vector 2 (unnormalized):')
+                            print(orientation_vector_2)
+
+                        orientation_vectors = np.stack((orientation_vector_1 / np.linalg.norm(orientation_vector_1),
+                                                        orientation_vector_2 / np.linalg.norm(orientation_vector_2)))
+
+                        tb_orientation_matrix = np.vstack((orientation_vectors, plane_normal_eigh))
+
+                        # Verify that the estimated orientation vectors are both perpendicular to the plane normal vector:
+                        if not all((orientation_vectors[:, :] @ plane_normal_eigh) < 1e-10):
+                            rospy.logerr('[pose_estimator] Estimated orientation vectors are not orthogonal! Orientation matrix:\n {}'.format(tb_orientation_matrix))
+                            rospy.loginfo(f'[pose_estimator] Will re-attempt to estimate orientation...')
+                            continue
+
+                        # Re-orient axes for desired convention:
+                        reorientation_matrix = np.array([[0, 1, 0], [1, 0, 0], [0, 0, -1]])
+                        tb_orientation_matrix = reorientation_matrix @ tb_orientation_matrix
+
+                        tb_tf_matrix = np.hstack((np.vstack((tb_orientation_matrix, np.zeros(3))), np.array([[0, 0, 0, 1]]).T))
+                        # tb_tf_matrix = np.hstack((np.vstack((tb_orientation_matrix, np.zeros(3))), np.array([[tb_position[0], tb_position[1], tb_position[2], 1]]).T))
+
+                        # Compute and normalize orientation quaternion:
+                        if vertical_side_found and horizontal_side_found:
+                            orientation_quaternion = tf_conversions.transformations.quaternion_from_matrix(tb_tf_matrix)
+                            orientation_quaternion /= np.linalg.norm(orientation_quaternion)
+                        else:
+                            rospy.logerr('[pose_estimator] Could not sufficiently ' + \
+                                         'determine taskboard orientation.')
+                            rospy.logerr('[pose_estimator] Will not publish ' + \
+                                         ' {taskboard_frame_name}.')
+                            rospy.loginfo(f'[pose_estimator] Will re-attempt to estimate orientation...')
+                            continue
+
+                        if debug:
+                            print('\n[DEBUG] Orientation vector 1 (normalized):')
+                            print(orientation_vectors[0, :])
+                            print('[DEBUG] Orientation vector 2 (normalized):')
+                            print(orientation_vectors[1, :])
+
+                            print('\n[DEBUG] Taskboard orientation matrix:'); print(tb_orientation_matrix)
+                            print('[DEBUG] Taskboard surface tb_position position:'); print(tb_position)
+
+                        elapsed_time = time.time() - tb_orientation_estimation_start_time
+                        rospy.loginfo(f'[pose_estimator] Estimated taskboard orientation in {elapsed_time:.2f}s')
+                        break
+
                     else:
-                        rospy.logwarn('[pose_estimator] Can not determine top/bottom of board!')
-                        orientation_vector_2 = rect_corners[2, :] - rect_corners[1, :]
-
-                    # Estimate first orientation vector:
-                    if quadrant_corner_ids['1'] is not None and quadrant_corner_ids['4'] is not None:
-                        orientation_vector_1 = rect_corners[quadrant_corner_ids['1'], :] - rect_corners[quadrant_corner_ids['4'], :]
-                        vertical_side_found = True
-                    elif quadrant_corner_ids['2'] is not None and quadrant_corner_ids['3'] is not None:
-                        orientation_vector_1 = rect_corners[quadrant_corner_ids['2'], :] - rect_corners[quadrant_corner_ids['3'], :]
-                        vertical_side_found = True
-                    else:
-                        rospy.logwarn('[pose_estimator] Can not determine right/left side of board!')
-                        orientation_vector_1 = rect_corners[1, :] - rect_corners[0, :]
-
-                    if debug:
-                        print('\n[DEBUG] Rectangle Corners:')
-                        print(rect_corners)
-                        print('[DEBUG] Quadrant Corner ID Candidates:')
-                        print(quadrant_corner_id_candidates)
-
-                        print('\n[DEBUG] Quadrant corner IDs:', quadrant_corner_ids)
-                        print('[DEBUG] Corner quadrant IDs:', corner_quadrant_ids)
-
-                        print('\n[DEBUG] Estimated best-fit plane normal vector:')
-                        print(plane_normal_eigh)
-
-                        print('\n[DEBUG] Orientation vector 1 (unnormalized):')
-                        print(orientation_vector_1)
-                        print('[DEBUG] Orientation vector 2 (unnormalized):')
-                        print(orientation_vector_2)
-
-                    orientation_vectors = np.stack((orientation_vector_1 / np.linalg.norm(orientation_vector_1),
-                                                    orientation_vector_2 / np.linalg.norm(orientation_vector_2)))
-
-                    # Verify that the estimated orientation vectors are both perpendicular to the plane normal vector:
-                    tb_orientation_matrix = np.vstack((orientation_vectors, plane_normal_eigh))
-                    assert all((orientation_vectors[:, :] @ plane_normal_eigh) < 1e-10), \
-                           rospy.logerr('[pose_estimator] Estimated orientation vectors are not orthogonal! Orientation matrix:\n {}'.format(tb_orientation_matrix))
-
-                    # Re-orient axes for desired convention:
-                    reorientation_matrix = np.array([[0, 1, 0], [1, 0, 0], [0, 0, -1]])
-                    tb_orientation_matrix = reorientation_matrix @ tb_orientation_matrix
-
-                    tb_tf_matrix = np.hstack((np.vstack((tb_orientation_matrix, np.zeros(3))), np.array([[0, 0, 0, 1]]).T))
-                    # tb_tf_matrix = np.hstack((np.vstack((tb_orientation_matrix, np.zeros(3))), np.array([[tb_position[0], tb_position[1], tb_position[2], 1]]).T))
-
-                    # Compute and normalize orientation quaternion:
-                    if vertical_side_found and horizontal_side_found:
-                        orientation_quaternion = tf_conversions.transformations.quaternion_from_matrix(tb_tf_matrix)
-                        orientation_quaternion /= np.linalg.norm(orientation_quaternion)
-                    else:
-                        rospy.logwarn('[pose_estimator] Could not sufficiently ' + \
-                                      'determine taskboard orientation.')
-                        rospy.logwarn('[pose_estimator] Will not publish ' + \
-                                      ' {taskboard_frame_name}.')
-
-                    if debug:
-                        print('\n[DEBUG] Orientation vector 1 (normalized):')
-                        print(orientation_vectors[0, :])
-                        print('[DEBUG] Orientation vector 2 (normalized):')
-                        print(orientation_vectors[1, :])
-
-                        print('\n[DEBUG] Taskboard orientation matrix:'); print(tb_orientation_matrix)
-                        print('[DEBUG] Taskboard surface tb_position position:'); print(tb_position)
-
-                    elapsed_time = time.time() - tb_orientation_estimation_start_time
-                    rospy.loginfo(f'[pose_estimator] Estimated taskboard orientation in {elapsed_time:.2f}s')
+                        rospy.logerr(f'[pose_estimator] Failed to estimate TB orientation after {num_retries} attempts.')
+                        current_detection_msg_ = None
+                        continue
 
                     elapsed_time = time.time() - position_estimation_start_time
                     rospy.loginfo(f'[pose_estimator] Finished in {elapsed_time:.2f}s')
