@@ -737,7 +737,8 @@ if __name__ == '__main__':
                         orig_ylims = ax.get_ylim()
                         orig_zlims = ax.get_zlim()
 
-                        _ = ax.view_init(-140, -120)
+                        # _ = ax.view_init(-140, -120)
+                        _ = ax.view_init(-92, -86)
 
                         fig = plt.figure('Taskboard Orientation Estimation Results')
                         ax = fig.add_subplot(projection='3d')
@@ -865,7 +866,8 @@ if __name__ == '__main__':
                         _ = ax.set_zlim(np.array(orig_zlims) * 1.0)
 
                         _ = plt.legend(prop={'size': 7}, bbox_to_anchor=(1.03, 1.0))
-                        _ = ax.view_init(-140, -120)
+                        # _ = ax.view_init(-140, -120)
+                        _ = ax.view_init(-92, -86)
 
                         plt.show()
 
