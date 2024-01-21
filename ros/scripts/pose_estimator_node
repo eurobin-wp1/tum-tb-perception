@@ -505,14 +505,15 @@ if __name__ == '__main__':
                         np.save(os.path.join(output_dir_path, 'pose_estimator_taskboard_points.npy'), np.stack(object_points_dict['taskboard']))
 
 
+                    ## ----------------------------------------------------------------------
+                    ## Orientation Estimation Test Program:
+                    ## ----------------------------------------------------------------------
 
+                    # Run orientation estimation until successful a maximum of 
+                    # num_retries times.
                     for attempt_id in range(num_retries):
 
                         tb_orientation_estimation_start_time = time.time()
-
-                        ## ----------------------------------------------------------------------
-                        ## Orientation Estimation Test Program:
-                        ## ----------------------------------------------------------------------
 
                         ## ----------------------------------------
                         ## Parameters and Variables:
