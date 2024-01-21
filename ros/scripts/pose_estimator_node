@@ -533,23 +533,6 @@ if __name__ == '__main__':
                         points_array = object_points_dict['taskboard']
                         tb_position = object_positions_dict['taskboard']
 
-                        # # + For testing only: rotate PC data:
-                        # # Rotate PC about Z-Axis:
-                        # rot_angle = np.deg2rad(270)
-                        # rot_matrix = np.array([[np.cos(rot_angle), -np.sin(rot_angle), 0],
-                        #                        [np.sin(rot_angle), np.cos(rot_angle), 0],
-                        #                        [0, 0, 1]])
-                        # # # Rotate PC about X-Axis:
-                        # # rot_angle = np.deg2rad(20)
-                        # # rot_matrix = np.array([[1, 0, 0],
-                        # #                        [0, np.cos(rot_angle), -np.sin(rot_angle)],
-                        # #                        [0, np.sin(rot_angle), np.cos(rot_angle)]])
-                        # points_array = points_array @ rot_matrix
-
-                        # # + For testing only: rectify object positions (for flipped PC, etc.) and rotate:
-                        # for object_id, position_array in object_positions_dict.items():
-                        #     object_positions_dict[object_id] = position_array @ rot_matrix
-
                         rospy.loginfo(f'[pose_estimator] Removing TB PC outliers' + \
                                       f' using agglomerative clustering...')
                         points_array = remove_outliers_agglomerative(points_array, 
