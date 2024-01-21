@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
     rospy.loginfo('[single_cnn_detector] Loading pretrained Faster R-CNN model from: {}'.format(model_weights_file_path))
     model = get_tb_cnn_model()
-    model.load_state_dict(torch.load(model_weights_file_path))
+    model.load_state_dict(torch.load(model_weights_file_path, map_location=device))
     model.eval()
 
     tb_dataset = TaskboardDataset(root=dataset_dir_path)
