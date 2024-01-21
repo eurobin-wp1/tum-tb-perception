@@ -42,6 +42,7 @@ if __name__ == '__main__':
     dataset_dir_path = rospy.get_param('~dataset_dir_path', '')
     output_dir_path = rospy.get_param('~output_dir_path', 
                                       os.path.join(package_path, 'output_data'))
+    confidence_threshold = rospy.get_param('~confidence_threshold', 0.7)
 
     image_topic = rospy.get_param('~image_topic', '/camera/color/image_raw')
     image_pub_topic = rospy.get_param('~image_pub_topic', 
@@ -120,7 +121,7 @@ if __name__ == '__main__':
 
         # Process NN outputs:
         bboxes = get_bbox_dicts(outputs[0], [item for item in tb_labels_list if item != 'background'])
-        bboxes = filter_preds(bboxes, score_threshold=0.7)
+        bboxes = filter_preds(bboxes, score_threshold=confidence_threshold)
 
         # Publish results in a BoundingBoxList message:
         bbox_list_msg = BoundingBoxList()
