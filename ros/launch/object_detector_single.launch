@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <launch>
 
-    <arg name="model_weights_file_path" default="$(find eurobin_perception)/models/fasterrcnn_10_epochs_07_seed_2_20231205_222706.pt"/>
+    <arg name="model_weights_file_path" default="$(find eurobin_perception)/models/tb_fasterrcnn_epochs_25_batches_1_tv_ratio_07_seed_2_20240121_154144.pt"/>
     <arg name="class_colors_file_path" default="$(find eurobin_perception)/config/class_colors_taskboard.yaml"/>
     <arg name="dataset_dir_path" default="/home/ahmed/tum/workspace/euRobin/detection_task/dataset"/>
     <arg name="output_dir_path" default="$(find eurobin_perception)/output_data"/>
