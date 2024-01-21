@@ -60,7 +60,7 @@ def camera_info_callback(msg):
     global current_camera_info_msg_ 
     current_camera_info_msg_ = msg
 
-object_list_publisher_ = None
+object_marker_publisher_ = None
 
 ## ----------------------------------------------------------------------
 ## Functions:
@@ -312,11 +312,11 @@ def get_point_markers(point, frame_id, label='', color_value=(0., 0., 0.)):
     text_marker_msg: visualization_msgs.Marker 
         Text visualization marker ROS message
     """
-    global object_marker_id
+    global object_marker_id_
 
     marker_msg = Marker()
     marker_msg.header.frame_id = frame_id
-    marker_msg.id = object_marker_id
+    marker_msg.id = object_marker_id_
     marker_msg.type = 2                                       # Sphere
     marker_msg.action = 0                                     # Add/modify
     marker_msg.pose = Pose(position=Point(*point), 
@@ -328,16 +328,16 @@ def get_point_markers(point, frame_id, label='', color_value=(0., 0., 0.)):
     marker_msg.color.g = color_value[1] / 255.
     marker_msg.color.b = color_value[2] / 255.
     marker_msg.color.a = 1.0
-    object_marker_id += 1
+    object_marker_id_ += 1
 
     text_marker_msg = copy.deepcopy(marker_msg)
-    text_marker_msg.id = object_marker_id
+    text_marker_msg.id = object_marker_id_
     text_marker_msg.type = 9                                  # Text-view-facing
     text_marker_msg.text = label
     text_marker_msg.pose.position.x = marker_msg.pose.position.x + \
                                       (0.005 * (len(label) / 2.))
     text_marker_msg.pose.position.y = marker_msg.pose.position.y - 0.01
-    object_marker_id += 1
+    object_marker_id_ += 1
 
     return marker_msg, text_marker_msg
 
@@ -353,8 +353,19 @@ def clear_object_markers():
     -------
     None
     """
-    global object_list_publisher_
-    object_list_publisher_.publish(ObjectList())
+    global object_marker_id_, object_marker_publisher_
+
+    marker_array_msg = MarkerArray()
+
+    marker_msg = Marker()
+    marker_msg.id = object_marker_id_ 
+    marker_msg.action = 3                                     # Delete all
+
+    marker_array_msg.markers.append(marker_msg)
+    object_marker_publisher_.publish(marker_array_msg)
+
+    # Reset object marker ID:
+    object_marker_id_ = 0
 
 
 if __name__ == '__main__':
@@ -386,8 +397,8 @@ if __name__ == '__main__':
     detector_result_subscriber = rospy.Subscriber(detector_result_topic, BoundingBoxList, detection_callback)
     camera_info_subscriber = rospy.Subscriber(camera_info_topic, CameraInfo, camera_info_callback)
 
-    object_list_publisher_ = rospy.Publisher(object_list_pub_topic, ObjectList, queue_size=10)
-    object_marker_publisher = rospy.Publisher(object_marker_pub_topic, MarkerArray, queue_size=10)
+    object_list_publisher = rospy.Publisher(object_list_pub_topic, ObjectList, queue_size=10)
+    object_marker_publisher_ = rospy.Publisher(object_marker_pub_topic, MarkerArray, queue_size=10)
     cropped_pc_debug_publisher = rospy.Publisher(cropped_pc_pub_topic, PointCloud, queue_size=10)
 
     tf_broadcaster = tf2_ros.TransformBroadcaster()
@@ -406,6 +417,7 @@ if __name__ == '__main__':
 
     class_colors_dict = load_class_color_map(class_colors_file_path)
     orientation_quaternion = None
+    object_marker_id_ = 0
 
     rospy.loginfo('[pose_estimator] Will estimate object poses for every message received on topic: {}'.format(detector_result_topic))
     try:
@@ -452,7 +464,6 @@ if __name__ == '__main__':
                     object_list_msg = ObjectList()
                     marker_array_msg = MarkerArray()
 
-                    object_marker_id = 0
                     for label, object_position in object_positions_dict.items():
                         object_msg = Object(label=label, pose=Pose(position=Point(*object_position), 
                                                                    orientation=Quaternion(0., 0., 0., 1.)))
@@ -471,8 +482,8 @@ if __name__ == '__main__':
                         marker_array_msg.markers.append(marker_msg)
                         marker_array_msg.markers.append(text_marker_msg)
 
-                    object_list_publisher_.publish(object_list_msg)
-                    object_marker_publisher.publish(marker_array_msg)
+                    object_list_publisher.publish(object_list_msg)
+                    object_marker_publisher_.publish(marker_array_msg)
 
                     cropped_pc_debug_publisher.publish(cropped_pc_msg)
 
@@ -896,7 +907,7 @@ if __name__ == '__main__':
                 # broadcast a frame for each:
                 updated_object_list_msg = ObjectList()
 
-                object_marker_id = 0
+                object_marker_id_ = 0
                 for object_msg in object_list_msg.objects:
                     label = object_msg.label
                     if label == 'taskboard':
@@ -915,7 +926,7 @@ if __name__ == '__main__':
                     tf_msg.transform.rotation = tb_quaternion
                     tf_broadcaster.sendTransform(tf_msg)
 
-                object_list_publisher_.publish(updated_object_list_msg)
+                object_list_publisher.publish(updated_object_list_msg)
 
             rate.sleep()
     except (KeyboardInterrupt, rospy.ROSInterruptException):
