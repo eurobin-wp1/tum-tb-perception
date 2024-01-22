@@ -19,7 +19,7 @@ from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
 from eurobin_perception.msg import BoundingBox, BoundingBoxList
 
-from eurobin_perception.cnn_image_detector import ImageDetector
+from eurobin_perception.image_detection import ImageDetector
 
 supported_torch_devices_ = ['cpu', 'gpu']
 
