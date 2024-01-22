@@ -19,6 +19,8 @@ CV2_BBOX_FONT_SCALE = 1.0
 CV2_BBOX_FONT = cv2.FONT_HERSHEY_SIMPLEX
 CV2_BBOX_FONT_SCALE = 0.5
 
+input_encoding_options_ = ['bgr', 'rgb']
+
 def load_class_color_map(class_colors_config_file_path):
     """
     Loads and returns a mapping between class names and their color values
@@ -70,7 +72,8 @@ def get_class_color(class_colors_dict, class_str):
         
         return list(np.random.random(3) * 255.)
     
-def annotate_image(image, bboxes, class_colors_dict, target_bboxes=None):
+def annotate_image(image, bboxes, class_colors_dict, target_bboxes=None,
+                   input_encoding='bgr'):
     """
     Returns an annotated version of the input image, containing:
       - bounding boxes
@@ -94,11 +97,19 @@ def annotate_image(image, bboxes, class_colors_dict, target_bboxes=None):
         BGR image array, post-annotation.
     """
 
+    global input_encoding_options_
+
     image_annotated = np.copy(image)
 
     for bbox in bboxes:
         label = bbox['class']
         color = get_class_color(class_colors_dict, label)
+        if input_encoding not in input_encoding_options_:
+            print(f'[WARN] annotate_image() got invalid value for input_encoding:' + \
+                  f' {input_encoding}. Must be one of {input_encoding_options_}.' + \
+                  f' Ignoring value...')
+        elif input_encoding == 'bgr':
+            color = color[::-1]
 
         # Draw bbox rectangle:
         image_annotated = cv2.rectangle(image_annotated,
