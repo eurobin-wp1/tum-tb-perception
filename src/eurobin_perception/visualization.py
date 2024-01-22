@@ -10,7 +10,6 @@ import yaml
 
 import cv2
 import numpy as np
-import seaborn as sns             # Only used for its color maps
 import matplotlib.pyplot as plt
 
 CV2_BBOX_FONT = cv2.FONT_HERSHEY_PLAIN
