@@ -22,7 +22,7 @@ from eurobin_perception.msg import BoundingBox, BoundingBoxList
 
 from eurobin_perception.models import get_tb_cnn_model
 from eurobin_perception.utils import get_bbox_dicts, filter_preds
-from eurobin_perception.dataset import TaskboardDataset
+from eurobin_perception.dataset import TaskboardDataset, apply_transforms
 from eurobin_perception.visualization import load_class_color_map, annotate_image
 
 supported_torch_devices_ = ['cpu', 'gpu']
@@ -86,6 +86,8 @@ if __name__ == '__main__':
     tb_labels_list = tb_dataset.gt_labels_list
     class_colors_dict = load_class_color_map(class_colors_file_path)
 
+    tensor_transforms = apply_transforms()
+
     ## ----------------------------------------------------------------------
     ## Detector Execution:
     ## ----------------------------------------------------------------------
@@ -109,7 +111,7 @@ if __name__ == '__main__':
         image_torch = tv_tensors.Image(image_cv)
         
         image_torch = image_torch.permute((2, 0, 1))                        # Source: (H, W, C). Desired(C, H, W)
-        image_torch = tb_dataset.transforms(image_torch)
+        image_torch = tensor_transforms(image_torch)
         model_inputs = [image_torch.to(device)]
 
         # Run NN model on input image:
