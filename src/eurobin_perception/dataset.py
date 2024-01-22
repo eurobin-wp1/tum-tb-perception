@@ -168,8 +168,9 @@ class TaskboardDataset(torch.utils.data.Dataset):
     (Note: the first i.e. 0th class should be "background".)
     """
 
-    def __init__(self, root):
+    def __init__(self, root, training=False):
         self.root = root
+        self.training = training
         self.image_dirs_dict = {'low_light': 'realsense/dark_low_light', 
                                 'med_light': 'realsense/near_window', 
                                 'high_light': 'realsense/light_on'}
@@ -184,7 +185,7 @@ class TaskboardDataset(torch.utils.data.Dataset):
         self.load_img_and_label_filenames()
         self.load_labels()
 
-        self.transforms = apply_transforms()
+        self.transforms = apply_transforms(training)
         
     def load_img_and_label_filenames(self):
         """
@@ -287,7 +288,7 @@ class TaskboardDataset(torch.utils.data.Dataset):
         target["labels"] = labels_tensor
         target["image_id"] = img_id
 
-        img, target = transforms(img, target)
+        img, target = self.transforms(img, target)
 
         return img, target
 
