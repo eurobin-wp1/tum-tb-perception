@@ -12,13 +12,10 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
-CV2_BBOX_FONT = cv2.FONT_HERSHEY_PLAIN
-CV2_BBOX_FONT_SCALE = 1.0
-
-CV2_BBOX_FONT = cv2.FONT_HERSHEY_SIMPLEX
-CV2_BBOX_FONT_SCALE = 0.5
-
+cv2_bbox_font_ = cv2.FONT_HERSHEY_SIMPLEX
+cv2_bbox_font_scale_ = 0.5
 input_encoding_options_ = ['bgr', 'rgb']
+
 
 def load_class_color_map(class_colors_config_file_path):
     """
@@ -123,8 +120,8 @@ def annotate_image(image, bboxes, class_colors_dict, target_bboxes=None,
             label_str += ': {:.2f}%'.format(float(confidence))
 
         # Estimate area of label box:
-        (w, h), _ = cv2.getTextSize(label_str, CV2_BBOX_FONT,
-                                    CV2_BBOX_FONT_SCALE, 1)
+        (w, h), _ = cv2.getTextSize(label_str, cv2_bbox_font_,
+                                    cv2_bbox_font_scale_, 1)
 
         # Draw faded label box and text:
         image_overlay = np.copy(image_annotated)
@@ -134,7 +131,7 @@ def annotate_image(image, bboxes, class_colors_dict, target_bboxes=None,
                                       color, -1)
         image_overlay = cv2.putText(image_overlay, label_str,
                                     (bbox['xmin'], bbox['ymin'] - 5),
-                                    CV2_BBOX_FONT, CV2_BBOX_FONT_SCALE,
+                                    cv2_bbox_font_, cv2_bbox_font_scale_,
                                     (255, 255, 255), 1)
         alpha = 0.5
         cv2.addWeighted(image_overlay, alpha, image_annotated,
