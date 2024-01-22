@@ -131,7 +131,6 @@ eurobin-perception
 * `rospy`
 * `rospkg`
 * `scipy`
-* `seaborn`
 * `torch`
 * `torchvision`
 
