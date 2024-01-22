@@ -103,10 +103,8 @@ class ImageDetector(object):
         annotated_image_cv = None
         if return_annotated_image:
             # Annotate image with BBs:
-            annotated_image_cv = annotate_image(cv2.cvtColor(image_cv, cv2.COLOR_RGB2BGR), 
-                                                bboxes, self.class_colors_dict)
-
-            annotated_image_cv = cv2.cvtColor(annotated_image_cv, cv2.COLOR_BGR2RGB)
-            # TODO: Consider optimizing to avoid the color conversions to and fro.
+            annotated_image_cv = annotate_image(image_cv, bboxes, 
+                                                self.class_colors_dict,
+                                                input_encoding='bgr')
 
         return bboxes, model_inference_time, annotated_image_cv 
