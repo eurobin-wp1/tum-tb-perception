@@ -15,15 +15,11 @@ import cv2
 import torch
 
 from cv_bridge import CvBridge, CvBridgeError
-from torchvision import tv_tensors
 
 from sensor_msgs.msg import Image
 from eurobin_perception.msg import BoundingBox, BoundingBoxList
 
-from eurobin_perception.models import get_tb_cnn_model
-from eurobin_perception.utils import get_bbox_dicts, filter_preds
-from eurobin_perception.dataset import TaskboardDataset, apply_transforms
-from eurobin_perception.visualization import load_class_color_map, annotate_image
+from eurobin_perception.cnn_image_detector import ImageDetector
 
 supported_torch_devices_ = ['cpu', 'gpu']
 
@@ -73,26 +69,22 @@ if __name__ == '__main__':
         rospy.logerr('[single_cnn_detector] Could not detect gpu device! Terminating.')
         sys.exit(1)
 
+    bridge = CvBridge()
+
     ## ----------------------------------------------------------------------
-    ## CNN Initializations:
+    ## Detector Initialization:
     ## ----------------------------------------------------------------------
 
-    rospy.loginfo('[single_cnn_detector] Loading pretrained Faster R-CNN model from: {}'.format(model_weights_file_path))
-    model = get_tb_cnn_model()
-    model.load_state_dict(torch.load(model_weights_file_path, map_location=device))
-    model.eval()
-
-    tb_dataset = TaskboardDataset(root=dataset_dir_path)
-    tb_labels_list = tb_dataset.gt_labels_list
-    class_colors_dict = load_class_color_map(class_colors_file_path)
-
-    tensor_transforms = apply_transforms()
+    rospy.loginfo('[single_cnn_detector] Initializing ImageDetector...')
+    detector = ImageDetector(dataset_dir_path=dataset_dir_path, 
+                             model_weights_file_path=model_weights_file_path, 
+                             class_colors_file_path=class_colors_file_path, 
+                             confidence_threshold=confidence_threshold,
+                             device=device)
 
     ## ----------------------------------------------------------------------
     ## Detector Execution:
     ## ----------------------------------------------------------------------
-
-    bridge = CvBridge()
 
     try:
         rospy.loginfo('[single_cnn_detector] Grabbing a single message from image topic: {}'.format(image_topic))
@@ -107,23 +99,17 @@ if __name__ == '__main__':
 
         detection_start_time = time.time()
 
-        # Preprocess input image:
-        image_torch = tv_tensors.Image(image_cv)
-        
-        image_torch = image_torch.permute((2, 0, 1))                        # Source: (H, W, C). Desired(C, H, W)
-        image_torch = tensor_transforms(image_torch)
-        model_inputs = [image_torch.to(device)]
-
-        # Run NN model on input image:
         rospy.loginfo('[single_cnn_detector] Running detection model on image...')
-        model_start_time = time.time()
-        outputs = model(model_inputs)
-        model_inference_time = time.time() - model_start_time 
+        detector_result = detector.detect_objects(
+                image_cv, 
+                return_annotated_image=publish_visual_output or \
+                                       display_output or \
+                                       save_output
+        )
+        bboxes = detector_result[0]
+        model_inference_time = detector_result[1]
+        detection_image_cv = detector_result[2]
         rospy.loginfo('[single_cnn_detector] Model inference time: {:.2f}s'.format(model_inference_time))
-
-        # Process NN outputs:
-        bboxes = get_bbox_dicts(outputs[0], [item for item in tb_labels_list if item != 'background'])
-        bboxes = filter_preds(bboxes, score_threshold=confidence_threshold)
 
         # Publish results in a BoundingBoxList message:
         bbox_list_msg = BoundingBoxList()
@@ -141,11 +127,6 @@ if __name__ == '__main__':
         bb_publisher.publish(bbox_list_msg)
 
         if publish_visual_output:
-            # Annotate image with BBs:
-            detection_image_cv = annotate_image(cv2.cvtColor(image_cv, cv2.COLOR_RGB2BGR), bboxes, class_colors_dict)
-            detection_image_cv = cv2.cvtColor(detection_image_cv, cv2.COLOR_BGR2RGB)
-            # TODO: Consider optimizing to avoid the color conversions to and fro.
-
             input_image_msg = bridge.cv2_to_imgmsg(image_cv, encoding="bgr8")
             input_image_msg.header.stamp = rospy.Time.now()
             input_image_msg.header.frame_id = image_msg.header.frame_id
@@ -175,8 +156,7 @@ if __name__ == '__main__':
             with open(os.path.join(output_dir_path, 'detection_result.pkl'), 'wb') as handle:
                 pickle.dump(bboxes, handle, protocol=pickle.HIGHEST_PROTOCOL)
             cv2.imwrite(os.path.join(output_dir_path, 'input_image.png'), image_cv)
-            if detection_image_cv is not None:
-                cv2.imwrite(os.path.join(output_dir_path, 'detection_image.png'), detection_image_cv)
+            cv2.imwrite(os.path.join(output_dir_path, 'detection_image.png'), detection_image_cv)
 
     except (KeyboardInterrupt, rospy.ROSInterruptException):
         rospy.loginfo('[single_cnn_detector] Stopping node')
