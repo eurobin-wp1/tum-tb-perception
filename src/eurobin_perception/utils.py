@@ -166,6 +166,29 @@ def get_iou_score(bbox_1_dict, bbox_2_dict):
 
     return intersect_area / union_area
 
+def bbox_list_msg_to_list(bbox_list_msg):
+    """
+    Converts the contents of a eurobin_perception.BoundingBoxList detection
+    result ROS message into a list of dicts containing the same bbox data.
+
+    Parameters
+    ----------
+    bbox_list_msg: eurobin_perception.BoundingBoxList
+        ROS message containing detector results (list of bboxes)
+
+    Returns
+    -------
+    bbox_dict_list: list
+        Dicts containing info on each detection bbox 
+        (class, xmin, ymin, xmax, ymax, confidence)
+    """
+
+    return [{'class': bbox_msg.label, 'confidence': bbox_msg.confidence,
+             'xmin': bbox_msg.xmin, 'ymin': bbox_msg.ymin,
+             'xmax': bbox_msg.xmax, 'ymax': bbox_msg.ymax} \
+                     for bbox_msg in bbox_list_msg.bounding_boxes]
+
+
 ## ----------------------------------------------------------------------
 ## Orientation Estimation Helper Functions:
 ## ----------------------------------------------------------------------
