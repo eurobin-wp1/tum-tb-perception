@@ -698,8 +698,6 @@ if __name__ == '__main__':
                     object_marker_id_ = 0
                     for object_msg in object_list_msg.objects:
                         label = object_msg.label
-                        if label == 'taskboard':
-                            continue
                         object_msg.pose.orientation = tb_quaternion
                         updated_object_list_msg.objects.append(object_msg)
 
