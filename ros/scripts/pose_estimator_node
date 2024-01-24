@@ -15,6 +15,7 @@ import sys
 import time
 import copy
 import pickle
+import socket
 
 import rospy
 import rospkg
@@ -31,6 +32,7 @@ from visualization_msgs.msg import Marker, MarkerArray
 from eurobin_perception.msg import BoundingBoxList, ObjectList, Object
 
 from eurobin_perception.visualization import load_class_color_map
+from eurobin_perception.utils import obj_list_msg_to_json
 from eurobin_perception.pose_estimation import (
     get_point_cloud_segments,
     estimate_object_positions,
@@ -68,6 +70,13 @@ def camera_info_callback(msg):
     current_camera_info_msg_ = msg
 
 object_marker_publisher_ = None
+
+## ----------------------------------------------------------------------
+## UDP Parameters
+## ----------------------------------------------------------------------
+
+udp_ip_ = '127.0.0.1'
+udp_port_ = 9000
 
 ## ----------------------------------------------------------------------
 ## Functions:
@@ -187,6 +196,16 @@ if __name__ == '__main__':
     tf_broadcaster = tf2_ros.TransformBroadcaster()
 
     ## ----------------------------------------------------------------------
+    ## UDP Initializations
+    ## ----------------------------------------------------------------------
+
+    rospy.loginfo(f'[pose_estimator] Initializing UDP socket with address' + \
+                  f' family AF_INET and type SOCK_DGRAM')
+    rospy.loginfo(f'[pose_estimator] Will send messages over IP {udp_ip_}' + \
+                  f' and port {udp_port_}.')
+    udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    ## ----------------------------------------------------------------------
     ## Estimator Execution:
     ## ----------------------------------------------------------------------
 
@@ -205,6 +224,7 @@ if __name__ == '__main__':
     rospy.loginfo('[pose_estimator] Will estimate object poses for every message received on topic: {}'.format(detector_result_topic))
     try:
         while not rospy.is_shutdown():
+            object_list_msg = None
             if current_detection_msg_ is not None:
                 clear_object_markers()
                 if current_pc2_msg_ is not None:
@@ -654,46 +674,61 @@ if __name__ == '__main__':
                                   ' Skipping pose estimation for this detection result...')
                 current_detection_msg_ = None
 
-            if orientation_quaternion is not None:
-                # Broadcast estimated taskboard frame:
-                tb_quaternion = Quaternion(*orientation_quaternion)
-
-                tf_msg = TransformStamped()
-                tf_msg.header.stamp = rospy.Time.now()
-                tf_msg.header.frame_id = current_camera_info_msg_.header.frame_id
-                # tf_msg.header.frame_id = 'camera_depth_optical_frame'
-                tf_msg.child_frame_id = taskboard_frame_name
-                tf_msg.transform.translation = Vector3(*tb_position)
-                tf_msg.transform.rotation = tb_quaternion
-                tf_broadcaster.sendTransform(tf_msg)
-
-                # TODO: Create TF to visualize taskboard_frame wrt dummy_link:
-                # tf_msg_test = TransformStamped()
-
-                # Re-publish objects list after adding orientations, and
-                # broadcast a frame for each:
-                updated_object_list_msg = ObjectList()
-
-                object_marker_id_ = 0
-                for object_msg in object_list_msg.objects:
-                    label = object_msg.label
-                    if label == 'taskboard':
-                        continue
-                    object_msg.pose.orientation = tb_quaternion
-                    updated_object_list_msg.objects.append(object_msg)
+            if object_list_msg is not None:
+                if orientation_quaternion is not None:
+                    # Broadcast estimated taskboard frame:
+                    tb_quaternion = Quaternion(*orientation_quaternion)
 
                     tf_msg = TransformStamped()
                     tf_msg.header.stamp = rospy.Time.now()
                     tf_msg.header.frame_id = current_camera_info_msg_.header.frame_id
                     # tf_msg.header.frame_id = 'camera_depth_optical_frame'
-                    tf_msg.child_frame_id = label + '_frame'
-                    tf_msg.transform.translation = Vector3(object_msg.pose.position.x,
-                                                           object_msg.pose.position.y,
-                                                           object_msg.pose.position.z)
+                    tf_msg.child_frame_id = taskboard_frame_name
+                    tf_msg.transform.translation = Vector3(*tb_position)
                     tf_msg.transform.rotation = tb_quaternion
                     tf_broadcaster.sendTransform(tf_msg)
 
-                object_list_publisher.publish(updated_object_list_msg)
+                    # TODO: Create TF to visualize taskboard_frame wrt dummy_link:
+                    # tf_msg_test = TransformStamped()
+
+                    # Re-publish objects list after adding orientations, and
+                    # broadcast a frame for each:
+                    updated_object_list_msg = ObjectList()
+
+                    object_marker_id_ = 0
+                    for object_msg in object_list_msg.objects:
+                        label = object_msg.label
+                        if label == 'taskboard':
+                            continue
+                        object_msg.pose.orientation = tb_quaternion
+                        updated_object_list_msg.objects.append(object_msg)
+
+                        tf_msg = TransformStamped()
+                        tf_msg.header.stamp = rospy.Time.now()
+                        tf_msg.header.frame_id = current_camera_info_msg_.header.frame_id
+                        # tf_msg.header.frame_id = 'camera_depth_optical_frame'
+                        tf_msg.child_frame_id = label + '_frame'
+                        tf_msg.transform.translation = Vector3(object_msg.pose.position.x,
+                                                               object_msg.pose.position.y,
+                                                               object_msg.pose.position.z)
+                        tf_msg.transform.rotation = tb_quaternion
+                        tf_broadcaster.sendTransform(tf_msg)
+
+                    object_list_publisher.publish(updated_object_list_msg)
+
+                    udp_object_list_msg = updated_object_list_msg
+                else:
+                    udp_object_list_msg = object_list_msg
+
+                # Send object pose data over UDP socket:
+                rospy.loginfo(f'[pose_estimator] Sending object pose data over' + \
+                              f' over UDP...')
+                udp_message = obj_list_msg_to_json(udp_object_list_msg)
+
+                if debug:
+                    print(f'[DEBUG] UDP message: \n{udp_message}')
+                udp_message = udp_message.encode()
+                udp_socket.sendto(udp_message, (udp_ip_, udp_port_))
 
             rate.sleep()
     except (KeyboardInterrupt, rospy.ROSInterruptException):
