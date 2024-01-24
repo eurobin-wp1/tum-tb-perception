@@ -11,6 +11,10 @@ import numpy as np
 import pandas as pd
 from sklearn.cluster import AgglomerativeClustering
 
+## Temp:
+import sensor_msgs.point_cloud2 as pc2
+from geometry_msgs.msg import Point
+
 ## ----------------------------------------------------------------------
 ## Functions:
 ## ----------------------------------------------------------------------
