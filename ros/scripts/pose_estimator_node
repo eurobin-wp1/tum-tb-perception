@@ -15,6 +15,7 @@ import sys
 import time
 import copy
 import pickle
+import socket
 
 import rospy
 import rospkg
@@ -31,6 +32,14 @@ from visualization_msgs.msg import Marker, MarkerArray
 from eurobin_perception.msg import BoundingBoxList, ObjectList, Object
 
 from eurobin_perception.visualization import load_class_color_map
+from eurobin_perception.utils import obj_list_msg_to_json
+from eurobin_perception.pose_estimation import (
+    get_point_cloud_segments,
+    estimate_object_positions,
+    convert_object_points_to_arrays,
+    remove_outliers,
+    remove_outliers_agglomerative,
+)
 
 # For debug visualizations:
 import matplotlib.pyplot as plt
@@ -63,232 +72,15 @@ def camera_info_callback(msg):
 object_marker_publisher_ = None
 
 ## ----------------------------------------------------------------------
-## Functions:
+## UDP Parameters
 ## ----------------------------------------------------------------------
 
-def get_point_cloud_segments(pointcloud2_msg, detection_result_msg, camera_info_msg, 
-                             cropped_pc_msg=None, cropped_pc_label='taskboard', 
-                             debug=False):
-    """
-    Extracts the segments of a pointcloud that correspond to each object that was
-    detected in an RGB image.
-    Returns the list of points (coordinates) that fall within the field of view
-    of each object's 2D bounding box.
-    Optionally returns the "cropped" pointcloud of a given object (label).
+udp_ip_ = '127.0.0.1'
+udp_port_ = 9000
 
-    The function performs the following operations:
-      - Converts a PointCloud2 message to a list of 3D point coordinates.
-      - Back-projects all points onto the image plane using the camera's
-        intrinsic parameters.
-      - Checks whether each projected point falls within the boundaries of any
-        of the given bounding boxes. If it does, the point is assigned to that
-        bounding box's class/label.
-
-    Parameters
-    ----------
-    pointcloud2_msg: sensor_msgs.PointCloud2
-        PointCloud2 ROS message containing perceived point cloud
-    detection_result_msg: eurobin_perception.BoundingBoxList
-        Detection result ROS message containg list of bounding boxes
-    camera_info_msg: sensor_msgs.CameraInfo
-        Camera information ROS message
-    cropped_pc_msg: sensor_msgs.PointCloud
-        PointCloud ROS message to be populated with cropped point cloud
-    cropped_pc_label: str
-        Label of object for which to return the cropped point cloud
-    debug: bool
-        Whether to print some debugging messages
-
-    Returns
-    -------
-    object_points_dict: dict
-        Mapping between labels and lists of corresponding points (contained
-        in objects of type sensor_msgs.point_cloud2.Point).
-    cropped_pc_msg: sensor_msgs.PointCloud
-        PointCloud ROS message, populated with cropped point cloud
-    """
-
-    # Get camera parameters:
-    camera_P = camera_info_msg.P
-    f_x = camera_P[0]; f_y = camera_P[5]
-    c_x = camera_P[2]; c_y = camera_P[6]
-
-    # Extract list of point positions (x, y, z) sensor_msgs/PointCloud2 message:
-    read_points_start_time = time.time()
-    pc_point_list = pc2.read_points_list(pointcloud2_msg, skip_nans=True, field_names=("x", "y", "z"))
-    if debug:
-        print('[DEBUG] [pose_estimator] Converted PC2 msg to points list in {:.2f}s'.format(time.time() - read_points_start_time))
-    # TODO: Consider moving to ros_numpy (partial) vectorization if runtime must be improved.
-
-    # Find and store the 3D points that fall within each detection BB using the 3D-to-2D back-projection method:
-    object_points_dict = {}
-    point_iter_start_time = time.time()
-    for point in pc_point_list:
-        # Run point containment check for each BB:
-        for bbox in detection_result_msg.bounding_boxes:
-            if bbox.label not in object_points_dict.keys():
-                object_points_dict[bbox.label] = []
-
-            # Compute projection of point onto image plane:
-            # Note: point indices: {x, y, z} --> {0, 1, 2}.
-            u = f_x * (point[0] / point[2]) + c_x
-            v = f_y * (point[1] / point[2]) + c_y
-
-            # Check if projected point is within the bounds of the BB:
-            if u > bbox.xmin and u < bbox.xmax and v > bbox.ymin and v < bbox.ymax:
-                object_points_dict[bbox.label].append(point)
-
-                # Add the point to the "cropped point cloud" (visualization for debugging):
-                if cropped_pc_msg is not None and bbox.label == cropped_pc_label:
-                    cropped_pc_msg.points.append(Point(x=point[0], y=point[1], z=point[2]))
-
-    if debug:
-        print('[DEBUG] [pose_estimator] Iterated over all points for all labels in {:.2f}s'.format(time.time() - point_iter_start_time))
-
-    return object_points_dict, cropped_pc_msg
-
-def estimate_object_positions(point_arrays_dict, debug=False):
-    """
-    Estimates the 3D positions of objects from lists of corresponding points.
-    By default, positions are estimated by the mean of the points.
-
-    Parameters
-    ----------
-    point_arrays_dict: dict
-        Mapping between labels and ndarrays of corresponding points.
-    debug: bool
-        Whether to print some debugging messages
-
-    Returns
-    -------
-    estimated_positions_dict: dict
-        Mapping between labels and ndarrays containing 3D position coordinates
-    """
-    estimated_positions_dict = {}
-
-    for label, points_array in point_arrays_dict.items():
-        estimated_positions_dict[label] = points_array.mean(axis=0)
-        if debug:
-            print('[DEBUG] Label: {}'.format(label))
-            print('[DEBUG] Points mean:', points_array.mean(axis=0))
-            print('[DEBUG] Points std:', points_array.std(axis=0))
-            print()
-
-    return estimated_positions_dict 
-
-def convert_object_points_to_arrays(point_lists_dict):
-    """
-    Converts the the values of the given dict from lists of sensor_msgs.Point
-    to ndarrays containing all points of shape (num_points, 3).
-    This simplifies a few downstream operations.
-
-    Parameters
-    ----------
-    point_lists_dict: dict
-        Mapping between labels and lists of corresponding points (contained
-        in objects of type sensor_msgs.point_cloud2.Point).
-
-    Returns
-    -------
-    point_arrays_dict: dict
-        Mapping between labels and ndarrays of corresponding points.
-    """
-    point_arrays_dict = {}
-    for label in point_lists_dict.keys():
-        point_arrays_dict[label] = np.stack(point_lists_dict[label])
-
-    return point_arrays_dict 
-
-def remove_outliers(points_array, percentiles=(25, 75), debug=False):
-    """
-    Removes outliers from the given array of 3D points using the IQR method.
-    The percentiles that are used to compute the inter-quartile range can be
-    configured.
-    Assumes that the columns of points_array contain coodinates in the x, y,
-    and z axes.
-
-    Parameters
-    ----------
-    points_array: ndarray
-        3D position coordinates of a set of points
-    percentiles: tuple
-        Upper and lower percentiles for the IQR computation
-    debug: bool
-        Whether to print some debugging messages
-
-    Returns
-    -------
-    points_array: ndarray
-        3D position coordinates of a set of points post outlier removal
-    """
-    points_df = pd.DataFrame(data=points_array, columns=['x', 'y', 'z'])
-
-    if debug:
-        print('\n[DEBUG] Original points array shape:', points_array.shape)
-        print(f'[DEBUG] percentiles: {percentiles}')
-    for dim in ['x', 'y', 'z']:
-        lower_percentile = np.percentile(points_df[dim],
-                                         percentiles[0],
-                                         method='midpoint')
-        upper_percentile = np.percentile(points_df[dim],
-                                         percentiles[1],
-                                         method='midpoint')
-        IQR = upper_percentile - lower_percentile
-        upper_bound = upper_percentile + (1.5 * IQR)
-        lower_bound = lower_percentile - (1.5 * IQR)
-
-        points_df = points_df.loc[(points_df[dim] >= lower_bound) & \
-                                  (points_df[dim] <= upper_bound)]
-        if debug:
-            print('[DEBUG] Removing outliers in {}:'.format(dim))
-            print('[DEBUG] Number of remaining points:', len(points_df))
-
-    points_array = np.array(points_df)
-
-    return points_array
-
-def remove_outliers_agglomerative(points_array, debug=False):
-    """
-    TODO
-
-    Parameters
-    ----------
-    points_array: ndarray
-        3D position coordinates of a set of points
-    debug: bool
-        Whether to print some debugging messages
-
-    Returns
-    -------
-    points_array: ndarray
-        3D position coordinates of a set of points post outlier removal
-    """
-    n_clusters = 2
-    model = AgglomerativeClustering(n_clusters=n_clusters,
-                                    linkage='single',
-                                    metric='cityblock')
-    point_indices = model.fit_predict(points_array)
-    cluster_points = dict(zip(np.arange(n_clusters),
-                              [points_array[point_indices == cluster_id] \
-                               for cluster_id in range(n_clusters)]))
-    num_points_dict = dict(zip(list(cluster_points.keys()),
-                               [cluster_points[cluster_id].shape[0] \
-                                for cluster_id in range(n_clusters)]))
-
-    # Select cluster with larger number of points as inlier:
-    inlier_cluster_index = np.argmax(list(num_points_dict.values()))
-
-    points_array = cluster_points[inlier_cluster_index]
-
-    if debug:
-        print('\n[DEBUG] Original points array shape:', points_array.shape)
-        for cluster_id in range(n_clusters):
-            print(f'[DEBUG] No. of points in cluster {cluster_id}: {num_points_dict[cluster_id]}')
-
-        print(f'[DEBUG] Selecting cluster {inlier_cluster_index} as inlier')
-        print(f'[DEBUG] Number of remaining points:', points_array.shape[0])
-
-    return points_array
+## ----------------------------------------------------------------------
+## Functions:
+## ----------------------------------------------------------------------
 
 def get_point_markers(point, frame_id, label='', color_value=(0., 0., 0.)):
     """
@@ -404,6 +196,16 @@ if __name__ == '__main__':
     tf_broadcaster = tf2_ros.TransformBroadcaster()
 
     ## ----------------------------------------------------------------------
+    ## UDP Initializations
+    ## ----------------------------------------------------------------------
+
+    rospy.loginfo(f'[pose_estimator] Initializing UDP socket with address' + \
+                  f' family AF_INET and type SOCK_DGRAM')
+    rospy.loginfo(f'[pose_estimator] Will send messages over IP {udp_ip_}' + \
+                  f' and port {udp_port_}.')
+    udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    ## ----------------------------------------------------------------------
     ## Estimator Execution:
     ## ----------------------------------------------------------------------
 
@@ -422,6 +224,7 @@ if __name__ == '__main__':
     rospy.loginfo('[pose_estimator] Will estimate object poses for every message received on topic: {}'.format(detector_result_topic))
     try:
         while not rospy.is_shutdown():
+            object_list_msg = None
             if current_detection_msg_ is not None:
                 clear_object_markers()
                 if current_pc2_msg_ is not None:
@@ -871,46 +674,61 @@ if __name__ == '__main__':
                                   ' Skipping pose estimation for this detection result...')
                 current_detection_msg_ = None
 
-            if orientation_quaternion is not None:
-                # Broadcast estimated taskboard frame:
-                tb_quaternion = Quaternion(*orientation_quaternion)
-
-                tf_msg = TransformStamped()
-                tf_msg.header.stamp = rospy.Time.now()
-                tf_msg.header.frame_id = current_camera_info_msg_.header.frame_id
-                # tf_msg.header.frame_id = 'camera_depth_optical_frame'
-                tf_msg.child_frame_id = taskboard_frame_name
-                tf_msg.transform.translation = Vector3(*tb_position)
-                tf_msg.transform.rotation = tb_quaternion
-                tf_broadcaster.sendTransform(tf_msg)
-
-                # TODO: Create TF to visualize taskboard_frame wrt dummy_link:
-                # tf_msg_test = TransformStamped()
-
-                # Re-publish objects list after adding orientations, and
-                # broadcast a frame for each:
-                updated_object_list_msg = ObjectList()
-
-                object_marker_id_ = 0
-                for object_msg in object_list_msg.objects:
-                    label = object_msg.label
-                    if label == 'taskboard':
-                        continue
-                    object_msg.pose.orientation = tb_quaternion
-                    updated_object_list_msg.objects.append(object_msg)
+            if object_list_msg is not None:
+                if orientation_quaternion is not None:
+                    # Broadcast estimated taskboard frame:
+                    tb_quaternion = Quaternion(*orientation_quaternion)
 
                     tf_msg = TransformStamped()
                     tf_msg.header.stamp = rospy.Time.now()
                     tf_msg.header.frame_id = current_camera_info_msg_.header.frame_id
                     # tf_msg.header.frame_id = 'camera_depth_optical_frame'
-                    tf_msg.child_frame_id = label + '_frame'
-                    tf_msg.transform.translation = Vector3(object_msg.pose.position.x,
-                                                           object_msg.pose.position.y,
-                                                           object_msg.pose.position.z)
+                    tf_msg.child_frame_id = taskboard_frame_name
+                    tf_msg.transform.translation = Vector3(*tb_position)
                     tf_msg.transform.rotation = tb_quaternion
                     tf_broadcaster.sendTransform(tf_msg)
 
-                object_list_publisher.publish(updated_object_list_msg)
+                    # TODO: Create TF to visualize taskboard_frame wrt dummy_link:
+                    # tf_msg_test = TransformStamped()
+
+                    # Re-publish objects list after adding orientations, and
+                    # broadcast a frame for each:
+                    updated_object_list_msg = ObjectList()
+
+                    object_marker_id_ = 0
+                    for object_msg in object_list_msg.objects:
+                        label = object_msg.label
+                        object_msg.pose.orientation = tb_quaternion
+                        updated_object_list_msg.objects.append(object_msg)
+
+                        tf_msg = TransformStamped()
+                        tf_msg.header.stamp = rospy.Time.now()
+                        tf_msg.header.frame_id = current_camera_info_msg_.header.frame_id
+                        # tf_msg.header.frame_id = 'camera_depth_optical_frame'
+                        tf_msg.child_frame_id = label + '_frame'
+                        tf_msg.transform.translation = Vector3(object_msg.pose.position.x,
+                                                               object_msg.pose.position.y,
+                                                               object_msg.pose.position.z)
+                        tf_msg.transform.rotation = tb_quaternion
+                        tf_broadcaster.sendTransform(tf_msg)
+
+                    object_list_publisher.publish(updated_object_list_msg)
+
+                    udp_object_list_msg = updated_object_list_msg
+                else:
+                    udp_object_list_msg = object_list_msg
+
+                # Send object pose data over UDP socket:
+                rospy.loginfo(f'[pose_estimator] Sending object pose data over' + \
+                              f' over UDP...')
+                orientation_success = True if orientation_quaternion is not None else False
+                udp_message = obj_list_msg_to_json(udp_object_list_msg, 
+                                                   orientation_success=orientation_success)
+
+                if debug:
+                    print(f'[DEBUG] UDP message: \n{udp_message}')
+                udp_message = udp_message.encode()
+                udp_socket.sendto(udp_message, (udp_ip_, udp_port_))
 
             rate.sleep()
     except (KeyboardInterrupt, rospy.ROSInterruptException):

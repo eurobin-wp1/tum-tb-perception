@@ -5,6 +5,8 @@ Contains various, general utility functions that are used in different
 components.
 """
 
+import json
+
 import numpy as np
 
 from scipy.spatial import ConvexHull
@@ -166,6 +168,29 @@ def get_iou_score(bbox_1_dict, bbox_2_dict):
 
     return intersect_area / union_area
 
+def bbox_list_msg_to_list(bbox_list_msg):
+    """
+    Converts the contents of a eurobin_perception.BoundingBoxList detection
+    result ROS message into a list of dicts containing the same bbox data.
+
+    Parameters
+    ----------
+    bbox_list_msg: eurobin_perception.BoundingBoxList
+        ROS message containing detector results (list of bboxes)
+
+    Returns
+    -------
+    bbox_dict_list: list
+        Dicts containing info on each detection bbox 
+        (class, xmin, ymin, xmax, ymax, confidence)
+    """
+
+    return [{'class': bbox_msg.label, 'confidence': bbox_msg.confidence,
+             'xmin': bbox_msg.xmin, 'ymin': bbox_msg.ymin,
+             'xmax': bbox_msg.xmax, 'ymax': bbox_msg.ymax} \
+                     for bbox_msg in bbox_list_msg.bounding_boxes]
+
+
 ## ----------------------------------------------------------------------
 ## Orientation Estimation Helper Functions:
 ## ----------------------------------------------------------------------
@@ -319,3 +344,45 @@ def rotation_matrix_from_vectors(vec_1, vec_2):
     kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
     rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
     return rotation_matrix
+
+# The following function handles data conversions for UDP message support:
+
+def obj_list_msg_to_json(object_list_msg, orientation_success):
+    """
+    Converts an eurobin_perception.ObjectList ROS message to a JSON string.
+    The data is restructured in a list of dicts.
+
+    Parameters
+    ----------
+    object_list_msg: eurobin_perception.ObjectList
+        Pose information on detected objects (from the pose_estimator)
+
+    Returns
+    -------
+    object_info_json_string: str
+        Object pose information represented in a JSON format
+    orientation_success: bool
+        Whether object orientations have been successfully estimated.
+        This is added as a field in the resulting JSON dict.
+    """
+    object_dict_list = []
+
+    for object_msg in object_list_msg.objects:
+        object_dict = {}
+
+        object_dict['label'] = object_msg.label
+        object_dict['position'] = (object_msg.pose.position.x,
+                                   object_msg.pose.position.y,
+                                   object_msg.pose.position.z,)
+        object_dict['orientation'] = (object_msg.pose.orientation.x,
+                                      object_msg.pose.orientation.y,
+                                      object_msg.pose.orientation.z,
+                                      object_msg.pose.orientation.w,)
+
+        object_dict_list.append(object_dict)
+
+    json_dict = {}
+    json_dict['orientation_success'] = str(orientation_success)
+    json_dict['object_list'] = object_dict_list
+
+    return json.dumps(json_dict, indent = 4)

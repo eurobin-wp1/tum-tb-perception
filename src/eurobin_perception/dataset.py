@@ -115,6 +115,38 @@ def get_labels_array(bboxes_list, gt_labels_list):
     return np.array(labels_list)
 
 
+## Note: Extra data augmentation steps; possibly unnecessary
+## -----------------------------------------------------------
+def apply_transforms(training=False):
+    """
+    Returns a function that composes and applies tensor transformations
+    from the torchvision library:
+      - Changing data type to float
+      - Converting TVTensor objects to "pure tensors" (removing metadata)
+      - If tensors are for training, applies random horizontal flips
+        (augmentation)
+
+    Inspired by the following resource:
+    https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    transforms: torchvision.transforms.v2._container.Compose
+        Function that composes and applies tensor transformations
+    """
+    transforms = []
+    if training:
+        transforms.append(T.RandomHorizontalFlip(0.5))
+    transforms.append(T.ToDtype(torch.float, scale=True))
+    transforms.append(T.ToPureTensor())
+    return T.Compose(transforms)
+## -----------------------------------------------------------
+
+
 ## ----------------------------------------------------------------------
 ## Dataset definition:
 ## ----------------------------------------------------------------------
@@ -153,7 +185,7 @@ class TaskboardDataset(torch.utils.data.Dataset):
         self.load_img_and_label_filenames()
         self.load_labels()
 
-        self.transforms = self.apply_transforms()
+        self.transforms = apply_transforms(training)
         
     def load_img_and_label_filenames(self):
         """
@@ -237,38 +269,6 @@ class TaskboardDataset(torch.utils.data.Dataset):
             Number of unique classes in the dataset.
         """
         return self.num_classes
-
-    ## Note: Extra data augmentation steps; possibly unnecessary
-    ## -----------------------------------------------------------
-
-    def apply_transforms(self):
-        """
-        Returns a function that composes and applies tensor transformations
-        from the torchvision library:
-          - Changing data type to float
-          - Converting TVTensor objects to "pure tensors" (removing metadata)
-          - If tensors are for training, applies random horizontal flips
-            (augmentation)
-
-        Inspired by the following resource:
-        https://pytorch.org/tutorials/intermediate/torchvision_tutorial.html
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        transforms: torchvision.transforms.v2._container.Compose
-            Function that composes and applies tensor transformations
-        """
-        transforms = []
-        if self.training:
-            transforms.append(T.RandomHorizontalFlip(0.5))
-        transforms.append(T.ToDtype(torch.float, scale=True))
-        transforms.append(T.ToPureTensor())
-        return T.Compose(transforms)
-    ## -----------------------------------------------------------
     
     def __getitem__(self, idx):
         img_path = self.imgs[idx]

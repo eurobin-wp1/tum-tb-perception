@@ -10,14 +10,12 @@ import yaml
 
 import cv2
 import numpy as np
-import seaborn as sns             # Only used for its color maps
 import matplotlib.pyplot as plt
 
-CV2_BBOX_FONT = cv2.FONT_HERSHEY_PLAIN
-CV2_BBOX_FONT_SCALE = 1.0
+cv2_bbox_font_ = cv2.FONT_HERSHEY_SIMPLEX
+cv2_bbox_font_scale_ = 0.5
+input_encoding_options_ = ['bgr', 'rgb']
 
-CV2_BBOX_FONT = cv2.FONT_HERSHEY_SIMPLEX
-CV2_BBOX_FONT_SCALE = 0.5
 
 def load_class_color_map(class_colors_config_file_path):
     """
@@ -70,7 +68,8 @@ def get_class_color(class_colors_dict, class_str):
         
         return list(np.random.random(3) * 255.)
     
-def annotate_image(image, bboxes, class_colors_dict, target_bboxes=None):
+def annotate_image(image, bboxes, class_colors_dict, target_bboxes=None,
+                   input_encoding='bgr'):
     """
     Returns an annotated version of the input image, containing:
       - bounding boxes
@@ -94,11 +93,19 @@ def annotate_image(image, bboxes, class_colors_dict, target_bboxes=None):
         BGR image array, post-annotation.
     """
 
+    global input_encoding_options_
+
     image_annotated = np.copy(image)
 
     for bbox in bboxes:
         label = bbox['class']
         color = get_class_color(class_colors_dict, label)
+        if input_encoding not in input_encoding_options_:
+            print(f'[WARN] annotate_image() got invalid value for input_encoding:' + \
+                  f' {input_encoding}. Must be one of {input_encoding_options_}.' + \
+                  f' Ignoring value...')
+        elif input_encoding == 'bgr':
+            color = color[::-1]
 
         # Draw bbox rectangle:
         image_annotated = cv2.rectangle(image_annotated,
@@ -113,8 +120,8 @@ def annotate_image(image, bboxes, class_colors_dict, target_bboxes=None):
             label_str += ': {:.2f}%'.format(float(confidence))
 
         # Estimate area of label box:
-        (w, h), _ = cv2.getTextSize(label_str, CV2_BBOX_FONT,
-                                    CV2_BBOX_FONT_SCALE, 1)
+        (w, h), _ = cv2.getTextSize(label_str, cv2_bbox_font_,
+                                    cv2_bbox_font_scale_, 1)
 
         # Draw faded label box and text:
         image_overlay = np.copy(image_annotated)
@@ -124,7 +131,7 @@ def annotate_image(image, bboxes, class_colors_dict, target_bboxes=None):
                                       color, -1)
         image_overlay = cv2.putText(image_overlay, label_str,
                                     (bbox['xmin'], bbox['ymin'] - 5),
-                                    CV2_BBOX_FONT, CV2_BBOX_FONT_SCALE,
+                                    cv2_bbox_font_, cv2_bbox_font_scale_,
                                     (255, 255, 255), 1)
         alpha = 0.5
         cv2.addWeighted(image_overlay, alpha, image_annotated,
