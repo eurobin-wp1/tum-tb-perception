@@ -347,7 +347,7 @@ def rotation_matrix_from_vectors(vec_1, vec_2):
 
 # The following function handles data conversions for UDP message support:
 
-def obj_list_msg_to_json(object_list_msg):
+def obj_list_msg_to_json(object_list_msg, orientation_success):
     """
     Converts an eurobin_perception.ObjectList ROS message to a JSON string.
     The data is restructured in a list of dicts.
@@ -361,6 +361,9 @@ def obj_list_msg_to_json(object_list_msg):
     -------
     object_info_json_string: str
         Object pose information represented in a JSON format
+    orientation_success: bool
+        Whether object orientations have been successfully estimated.
+        This is added as a field in the resulting JSON dict.
     """
     object_dict_list = []
 
@@ -378,4 +381,8 @@ def obj_list_msg_to_json(object_list_msg):
 
         object_dict_list.append(object_dict)
 
-    return json.dumps(object_dict_list, indent = 4)
+    json_dict = {}
+    json_dict['orientation_success'] = str(orientation_success)
+    json_dict['object_list'] = object_dict_list
+
+    return json.dumps(json_dict, indent = 4)
