@@ -312,3 +312,170 @@ def remove_outliers_agglomerative(points_array, debug=False):
         print(f'[DEBUG] Number of remaining points:', points_array.shape[0])
 
     return points_array
+
+
+class PositionEstimator(object):
+    """
+    Object position estimator that utilizes CNN RGB detection results and
+    depth data: point clouds.
+
+    Note: this class was designed and is currently used for the taskboard
+    challenge and dataset, but could be made more general in the future.
+
+    Parameters
+    ----------
+        camera_params_dict: dict
+            Camera parameter values: f_x, f_y, c_x, c_y
+    """
+
+    def __init__(self, camera_params_dict=None):
+        self.camera_params_dict = camera_params_dict
+
+        self.name = self.__class__.__name__
+
+    def get_point_cloud_segments(self, pc_points, bbox_dict_list, 
+                                 camera_params_dict, 
+                                 cropped_pc_label='taskboard', debug=False):
+        """
+        Extracts the segments of a pointcloud's set of points that correspond 
+        to each object that was detected in an RGB image.
+        Returns the list of points (coordinates) that fall within the field of view
+        of each object's 2D bounding box.
+        Optionally returns the list of 3D points that form the  "cropped" 
+        pointcloud of a given object (label).
+
+        The function performs the following operations:
+          - Back-projects all given 3D points onto the image plane using the camera's
+            intrinsic parameters.
+          - Checks whether each projected point falls within the boundaries of any
+            of the given bounding boxes. If it does, the point is assigned to that
+            bounding box's class/label.
+
+        Parameters
+        ----------
+        pc_points: list or ndarray
+            Iterable containing a set of 3D points. Can be a list of
+            sensor_msgs.point_cloud2.Point or a numpy array of shape
+            (num_points, 3).
+        bbox_dict_list: 
+            Dicts containing info on each detection bbox 
+            (class, xmin, ymin, xmax, ymax, confidence)
+        camera_params_dict: dict
+            Camera parameter values: f_x, f_y, c_x, c_y
+        cropped_pc_label: str
+            Label of object for which to return the cropped point cloud (if debug)
+        debug: bool
+            Whether to print some debugging messages
+
+        Returns
+        -------
+        object_points_dict: dict
+            Mapping between labels and lists of corresponding points (contained
+            in objects whose types will depend on the input pc_points, e.g.: 
+            sensor_msgs.point_cloud2.Point, list, ndarray).
+        cropped_pc_points: list
+            Cropped point cloud set of 3D points
+        """
+        f_x, f_y = camera_params_dict['f_x'], camera_params_dict['f_y']
+        c_x, c_y = camera_params_dict['c_x'], camera_params_dict['c_y']
+        cropped_pc_points = []
+
+        # Find and store the 3D points that fall within each detection BB using the 3D-to-2D back-projection method:
+        object_points_dict = {}
+        point_iter_start_time = time.time()
+        for point in pc_points:
+            # Run point containment check for each BB:
+            for bbox in bbox_dict_list:
+                if bbox['class'] not in object_points_dict.keys():
+                    object_points_dict[bbox['class']] = []
+
+                # Compute projection of point onto image plane:
+                # Note: point indices: {x, y, z} --> {0, 1, 2}.
+                u = f_x * (point[0] / point[2]) + c_x
+                v = f_y * (point[1] / point[2]) + c_y
+
+                # Check if projected point is within the bounds of the BB:
+                if u > bbox['xmin'] and u < bbox['xmax'] and v > bbox['ymin'] and v < bbox['ymax']:
+                    object_points_dict[bbox['class']].append(point)
+
+                    # Add the point to the "cropped point cloud" (visualization for debugging):
+                    if bbox['class'] == cropped_pc_label:
+                        cropped_pc_points.append(list(point))
+
+        if debug:
+            iteration_time = time.time() - point_iter_start_time
+            print(f'[DEBUG] [{self.name}] Iterated over all points for all labels in {iteration_time:.2f}s')
+
+        return object_points_dict, cropped_pc_points
+
+    def estimate_object_positions(self, bbox_dict_list, pc_point_list, 
+                                  cropped_pc_label=None, debug=False):
+        """
+        TODO
+
+        Parameters
+        ----------
+        bbox_dict_list: 
+            Dicts containing info on each detection bbox 
+            (class, xmin, ymin, xmax, ymax, confidence)
+        pc_points: list or ndarray
+            Iterable containing a set of 3D points. Can be a list of
+            sensor_msgs.point_cloud2.Point or a numpy array of shape
+            (num_points, 3).
+        cropped_pc_label: str
+            Label of object for which to return the cropped point cloud (if debug)
+        debug: bool
+            Whether to print some debugging messages
+
+        Returns
+        -------
+        TODO
+        """
+        object_points_dict, cropped_pc_points = \
+            self.get_point_cloud_segments(
+                pc_points=pc_point_list,
+                bbox_dict_list=bbox_dict_list,
+                camera_params_dict=self.camera_params_dict,
+                cropped_pc_label=cropped_pc_label,
+                debug=debug
+        )
+        object_points_dict = convert_object_points_to_arrays(object_points_dict)
+
+        if debug:
+            # Copy unfiltered taskboard data for later visualizations:
+            unfiltered_points_array = object_points_dict[cropped_pc_label].copy()
+        else:
+            unfiltered_points_array = None
+
+        # Remove outliers using IQR method:
+        for object_id, points_array in object_points_dict.items():
+            if debug:
+                print(f'\n[DEBUG] [{self.name}] Removing outliers from {object_id} points...')
+
+            percentiles = (35, 65) if object_id == 'taskboard' \
+                            else (25, 75)
+            filtered_points_array = remove_outliers(points_array,
+                                                    percentiles=percentiles,
+                                                    debug=debug)
+            object_points_dict[object_id] = filtered_points_array
+
+        object_positions_dict = estimate_object_positions(object_points_dict, 
+                                                          debug=debug)
+
+        return (object_positions_dict, object_points_dict,
+                cropped_pc_points, unfiltered_points_array) 
+
+    def load_camera_params(self, camera_params_dict):
+        """
+        Stores the given camera parameter values.
+
+        Parameters
+        ----------
+        camera_params_dict: dict
+            Camera parameter values: f_x, f_y, c_x, c_y
+
+        Returns
+        -------
+        None
+        """
+        self.camera_params_dict = camera_params_dict
