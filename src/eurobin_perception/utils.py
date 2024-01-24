@@ -5,6 +5,8 @@ Contains various, general utility functions that are used in different
 components.
 """
 
+import json
+
 import numpy as np
 
 from scipy.spatial import ConvexHull
@@ -342,3 +344,38 @@ def rotation_matrix_from_vectors(vec_1, vec_2):
     kmat = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
     rotation_matrix = np.eye(3) + kmat + kmat.dot(kmat) * ((1 - c) / (s ** 2))
     return rotation_matrix
+
+# The following function handles data conversions for UDP message support:
+
+def obj_list_msg_to_json(object_list_msg):
+    """
+    Converts an eurobin_perception.ObjectList ROS message to a JSON string.
+    The data is restructured in a list of dicts.
+
+    Parameters
+    ----------
+    object_list_msg: eurobin_perception.ObjectList
+        Pose information on detected objects (from the pose_estimator)
+
+    Returns
+    -------
+    object_info_json_string: str
+        Object pose information represented in a JSON format
+    """
+    object_dict_list = []
+
+    for object_msg in object_list_msg.objects:
+        object_dict = {}
+
+        object_dict['label'] = object_msg.label
+        object_dict['position'] = (object_msg.pose.position.x,
+                                   object_msg.pose.position.y,
+                                   object_msg.pose.position.z,)
+        object_dict['orientation'] = (object_msg.pose.orientation.x,
+                                      object_msg.pose.orientation.y,
+                                      object_msg.pose.orientation.z,
+                                      object_msg.pose.orientation.w,)
+
+        object_dict_list.append(object_dict)
+
+    return json.dumps(object_dict_list, indent = 4)
