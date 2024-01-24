@@ -11,17 +11,17 @@ import numpy as np
 import pandas as pd
 from sklearn.cluster import AgglomerativeClustering
 
-## Temp:
-import sensor_msgs.point_cloud2 as pc2
-from geometry_msgs.msg import Point
-
 ## ----------------------------------------------------------------------
 ## Functions:
 ## ----------------------------------------------------------------------
 
-def get_point_cloud_segments(pointcloud2_msg, detection_result_msg, camera_info_msg, 
-                             cropped_pc_msg=None, cropped_pc_label='taskboard', 
-                             debug=False):
+## Temp:
+import sensor_msgs.point_cloud2 as pc2
+from geometry_msgs.msg import Point
+
+def get_point_cloud_segments_ros(pointcloud2_msg, detection_result_msg, camera_info_msg, 
+                                 cropped_pc_msg=None, cropped_pc_label='taskboard', 
+                                 debug=False):
     """
     Extracts the segments of a pointcloud that correspond to each object that was
     detected in an RGB image.
@@ -101,8 +101,8 @@ def get_point_cloud_segments(pointcloud2_msg, detection_result_msg, camera_info_
 
     return object_points_dict, cropped_pc_msg
 
-def get_point_cloud_segments_v2(pc_points, bbox_dict_list, camera_params_dict, 
-                                cropped_pc_label='taskboard', debug=False):
+def get_point_cloud_segments(pc_points, bbox_dict_list, camera_params_dict, 
+                             cropped_pc_label='taskboard', debug=False):
     """
     Extracts the segments of a pointcloud's set of points that correspond 
     to each object that was detected in an RGB image.
