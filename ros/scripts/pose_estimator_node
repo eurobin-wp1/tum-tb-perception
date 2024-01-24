@@ -721,7 +721,9 @@ if __name__ == '__main__':
                 # Send object pose data over UDP socket:
                 rospy.loginfo(f'[pose_estimator] Sending object pose data over' + \
                               f' over UDP...')
-                udp_message = obj_list_msg_to_json(udp_object_list_msg)
+                orientation_success = True if orientation_quaternion is not None else False
+                udp_message = obj_list_msg_to_json(udp_object_list_msg, 
+                                                   orientation_success=orientation_success)
 
                 if debug:
                     print(f'[DEBUG] UDP message: \n{udp_message}')
