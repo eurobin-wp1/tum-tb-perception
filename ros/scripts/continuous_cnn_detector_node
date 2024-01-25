@@ -19,6 +19,7 @@ import torch
 
 from cv_bridge import CvBridge, CvBridgeError
 
+from std_msgs.msg import Bool
 from sensor_msgs.msg import Image
 from eurobin_perception.msg import BoundingBox, BoundingBoxList
 
@@ -36,6 +37,12 @@ current_image_msg_ = None
 def image_callback(msg):
     global current_image_msg_
     current_image_msg_ = msg
+
+def trigger_callback(msg):
+    global triggered_
+
+    rospy.loginfo('[cnn_detector] Received trigger ROS message')
+    triggered_ = msg.data
 
 
 if __name__ == '__main__':
@@ -56,6 +63,8 @@ if __name__ == '__main__':
     run_on_trigger = rospy.get_param('~run_on_trigger', False)
 
     image_topic = rospy.get_param('~image_topic', '/camera/color/image_raw')
+    trigger_topic = rospy.get_param('~trigger_topic', 
+                                    '/eurobin_perception/detector_trigger')
     image_pub_topic = rospy.get_param('~image_pub_topic', 
                                       '/eurobin_perception/detection_images')
     input_image_pub_topic = rospy.get_param('~input_image_pub_topic', 
@@ -64,6 +73,7 @@ if __name__ == '__main__':
                                           '/eurobin_perception/detection_result')
 
     image_subscriber = rospy.Subscriber(image_topic, Image, image_callback)
+    trigger_subscriber = rospy.Subscriber(trigger_topic, Bool, trigger_callback)
 
     publish_visual_output = rospy.get_param('~publish_visual_output', True)
     save_output = rospy.get_param('~save_output', False)
@@ -146,7 +156,7 @@ if __name__ == '__main__':
                 if not triggered_:
                     continue
                 else:
-                    rospy.loginfo('[cnn_detector] Received trigger message')
+                    triggered_ = False
 
             rospy.loginfo('[cnn_detector] Running detection model on image...')
             detection_start_time = time.time()
