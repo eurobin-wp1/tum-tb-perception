@@ -9,6 +9,7 @@ Optionally runs the detector only after a ROS/UDP trigger message.
 import os
 import sys
 import time
+import signal
 import pickle
 import datetime
 
@@ -73,7 +74,8 @@ if __name__ == '__main__':
                                           '/eurobin_perception/detection_result')
 
     image_subscriber = rospy.Subscriber(image_topic, Image, image_callback)
-    trigger_subscriber = rospy.Subscriber(trigger_topic, Bool, trigger_callback)
+    if run_on_trigger:
+        trigger_subscriber = rospy.Subscriber(trigger_topic, Bool, trigger_callback)
 
     publish_visual_output = rospy.get_param('~publish_visual_output', True)
     save_output = rospy.get_param('~save_output', False)
@@ -144,19 +146,21 @@ if __name__ == '__main__':
                       'on the latest message...')
     try:
         while not rospy.is_shutdown():
-            try:
-                rate.sleep()
-            except rospy.ROSTimeMovedBackwardsException as e:
-                rospy.logwarn('[cnn_detector] Caught ROSTimeMovedBackwardsException ' + \
-                              'when executing rate.sleep(). This can happen when ' + \
-                              'incoming messages had stopped, and have just ' + \
-                              'resumed publishing.')
-
             if run_on_trigger:
-                if not triggered_:
-                    continue
-                else:
-                    triggered_ = False
+                # Note: using a signal SIGINT handler here because a try-except
+                # block does not work for the inner while loop (does not terminate cleanly).
+                signal.signal(signal.SIGINT, signal.SIG_DFL);
+                while not triggered_:
+                    rate.sleep()
+                triggered_ = False
+            else:
+                try:
+                    rate.sleep()
+                except rospy.ROSTimeMovedBackwardsException as e:
+                    rospy.logwarn('[cnn_detector] Caught ROSTimeMovedBackwardsException ' + \
+                                  'when executing rate.sleep(). This can happen when ' + \
+                                  'incoming messages had stopped, and have just ' + \
+                                  'resumed publishing.')
 
             rospy.loginfo('[cnn_detector] Running detection model on image...')
             detection_start_time = time.time()
