@@ -8,20 +8,26 @@ Runs continuously, processing every incoming image.
 
 Note: the functionality provided by this node could be encapsulated in a
 ROS action in the future.
+
+Optionally runs the detector only after a ROS/UDP trigger message.
 """
 
 import os
 import sys
+import json
 import time
+import socket
+import signal
 import datetime
 
+import cv2
 import rospy
 import rospkg
-import cv2
 import numpy as np
 
 from cv_bridge import CvBridge, CvBridgeError
 
+from std_msgs.msg import Bool
 from sensor_msgs.msg import Image
 from std_msgs.msg import Float32
 
@@ -38,14 +44,27 @@ text_label_colors_ = dict(zip(['red', 'white_center', 'green', 'lcd'],
 task_stage_options_ = [1, 2]
 
 ## ----------------------------------------------------------------------
+## UDP Parameters
+## ----------------------------------------------------------------------
+
+udp_buffer_size_ = 1024
+
+## ----------------------------------------------------------------------
 ## ROS Callbacks and Message Initializations:
 ## ----------------------------------------------------------------------
 
 current_image_msg_ = None
+ros_triggered_ = False
 
 def image_callback(msg):
     global current_image_msg_ 
     current_image_msg_ = msg
+
+def trigger_callback(msg):
+    global ros_triggered_
+
+    rospy.loginfo('[slider_task_solver] Received trigger ROS message')
+    ros_triggered_ = msg.data
 
 ## ----------------------------------------------------------------------
 ## Functions:
@@ -120,8 +139,14 @@ if __name__ == '__main__':
     task_stage = rospy.get_param('~task_stage', 1)
     detection_score_threshold = rospy.get_param('~detection_score_threshold', 
                                                 0.98)
+    run_on_ros_trigger = rospy.get_param('~run_on_ros_trigger', False)
+    run_on_udp_trigger = rospy.get_param('~run_on_udp_trigger', True)
+    udp_ip = rospy.get_param('~udp_ip', 'localhost')
+    udp_port = rospy.get_param('~udp_port', 8000)
 
     image_topic = rospy.get_param('~image_topic', '/camera/color/image_raw')
+    trigger_topic = rospy.get_param('~trigger_topic',
+                                    '/eurobin_perception/silder_solver_trigger')
     image_pub_topic = rospy.get_param('~image_pub_topic', 
                                       '/eurobin_perception/slider_solver_images')
     input_image_pub_topic = rospy.get_param(
@@ -138,6 +163,8 @@ if __name__ == '__main__':
     debug = rospy.get_param('~debug', False)
 
     image_subscriber = rospy.Subscriber(image_topic, Image, image_callback)
+    if run_on_ros_trigger:
+        trigger_subscriber = rospy.Subscriber(trigger_topic, Bool, trigger_callback)
 
     slider_distance_publisher = rospy.Publisher(slider_distance_pub_topic, 
                                                 Float32, queue_size=10)
@@ -161,20 +188,25 @@ if __name__ == '__main__':
                       'parameter! Must be one of {task_stage_options_}')
         sys.exit(1)
 
-    if save_output:
-        rospy.loginfo(f'[slider_task_solver] Will save output data to: ' + \
-                       '{output_dir_path}')
+
+    # Verify trigger setting (ROS OR UDP):
+    if run_on_ros_trigger and run_on_udp_trigger:
+        rospy.logerr('[slider_task_solver] Node supports trigger messages from' + \
+                     ' either ROS or UDP, but run_on_ros_trigger and' + \
+                     ' run_on_udp_trigger were both set to true!')
+        rospy.logerr('[slider_task_solver] Terminating.')
+        sys.exit(1)
 
     # Set up output data directory:
     if save_output:
         output_sub_dir_path = 'slider_solver_output_' + \
                               datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         output_dir_path = os.path.join(output_dir_path, output_sub_dir_path)
-        rospy.loginfo(f'[cnn_detector] Saving output data in ' + \
+        rospy.loginfo(f'[slider_task_solver] Saving output data in ' + \
                       f'{output_dir_path}')
 
         if not os.path.isdir(output_dir_path):
-            rospy.loginfo(f'[cnn_detector] Output directory does not exist! ' + \
+            rospy.loginfo(f'[slider_task_solver] Output directory does not exist! ' + \
                           f' Creating now...')
             os.makedirs(output_dir_path)
 
@@ -223,11 +255,67 @@ if __name__ == '__main__':
             rospy.loginfo('[slider_task_solver] Terminating...')
             sys.exit(0)
 
+        rospy.loginfo('[slider_task_solver] Received first image message')
+
         rospy.loginfo(f'[slider_task_solver] Will estimate solution distance ' + \
                        'for every image message.')
 
+        if run_on_ros_trigger:
+            rospy.loginfo(f'[slider_task_solver] Will estimate solution distance '
+                          f'on the latest image message at every trigger ' + \
+                          f'ROS message on topic {trigger_topic}...')
+        elif run_on_udp_trigger:
+            rospy.loginfo(f'[slider_task_solver] Will estimate solution distance '
+                          f'on the latest image message at every trigger ' + \
+                          f'UDP message over IP {udp_ip} and port {udp_port}...')
+
+            udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            udp_socket.settimeout(None)
+            udp_socket.bind((udp_ip, udp_port))
+        else:
+            rospy.loginfo(f'[slider_task_solver] Will estimate solution distance ' + \
+                           'for every incoming image message...')
+
         while not rospy.is_shutdown():
-            rate.sleep()
+            if run_on_ros_trigger:
+                # Note: using a signal SIGINT handler here because a try-except
+                # block does not work for the inner while loop (does not terminate cleanly).
+                signal.signal(signal.SIGINT, signal.SIG_DFL);
+                while not ros_triggered_:
+                    rate.sleep()
+                ros_triggered_ = False
+            elif run_on_udp_trigger:
+                # Note: the following will block until a message is received:
+                signal.signal(signal.SIGINT, signal.SIG_DFL);
+                udp_msg, udp_addr = udp_socket.recvfrom(udp_buffer_size_)
+
+                rospy.loginfo('[slider_task_solver] Received trigger UDP message')
+                udp_msg_data = json.loads(udp_msg.decode())
+
+                try:
+                    if type(udp_msg_data["trigger"]).__name__ != 'bool' or \
+                            udp_msg_data['trigger'] != True:
+                        rospy.logwarn('[slider_task_solver] Received invalid value' + \
+                                      ' in UDP message dict for key trigger:' + \
+                                     f' {udp_msg_data["trigger"]}. Will only' + \
+                                      ' trigger on "True". Ignoring... ')
+                        continue
+                except Exception as e:
+                    rospy.logwarn('[slider_task_solver] Could not access trigger' + \
+                                  ' information in UDP message! Please check' + \
+                                 f' message format!. Ignoring...')
+                    continue
+            else:
+                try:
+                    rate.sleep()
+                except rospy.ROSTimeMovedBackwardsException as e:
+                    rospy.logwarn('[slider_task_solver] Caught ROSTimeMovedBackwardsException ' + \
+                                  'when executing rate.sleep(). This can happen when ' + \
+                                  'incoming messages had stopped, and have just ' + \
+                                  'resumed publishing.')
+
+            if run_on_ros_trigger or run_on_udp_trigger:
+                rospy.loginfo(f'[slider_task_solver] Estimating slider distance...')
             start_time = time.time()
 
             try:
@@ -377,9 +465,8 @@ if __name__ == '__main__':
                 input_image_msg.header.frame_id = current_image_msg_.header.frame_id
                 input_image_publisher.publish(input_image_msg)
 
-            if debug:
-                elapsed_time = time.time() - start_time
-                rospy.loginfo(f'[slider_task_solver] Finished in {elapsed_time:.3f}s')
+            elapsed_time = time.time() - start_time
+            rospy.loginfo(f'[slider_task_solver] Finished in {elapsed_time:.3f}s')
 
             # Optionally save results: annotated image.
             if save_output:
