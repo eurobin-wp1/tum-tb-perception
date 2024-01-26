@@ -17,6 +17,7 @@
     <node pkg="eurobin_perception" type="slider_task_solver_node" name="slider_task_solver"
         output="screen" respawn="false">
         <param name="template_source_image_dir_path" type="str" value="$(arg template_source_image_dir_path)"/>
+        <param name="output_dir_path" type="str" value="$(arg output_dir_path)"/>
         <param name="task_stage" type="int" value="$(arg task_stage)"/>
         <param name="detection_score_threshold" type="double" value="$(arg detection_score_threshold)"/>
         <param name="image_topic" type="str" value="$(arg image_topic)"/>
