@@ -13,6 +13,7 @@ ROS action in the future.
 import os
 import sys
 import time
+import datetime
 
 import rospy
 import rospkg
@@ -164,11 +165,24 @@ if __name__ == '__main__':
         rospy.loginfo(f'[slider_task_solver] Will save output data to: ' + \
                        '{output_dir_path}')
 
+    # Set up output data directory:
+    if save_output:
+        output_sub_dir_path = 'slider_solver_output_' + \
+                              datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir_path = os.path.join(output_dir_path, output_sub_dir_path)
+        rospy.loginfo(f'[cnn_detector] Saving output data in ' + \
+                      f'{output_dir_path}')
+
+        if not os.path.isdir(output_dir_path):
+            rospy.loginfo(f'[cnn_detector] Output directory does not exist! ' + \
+                          f' Creating now...')
+            os.makedirs(output_dir_path)
+
+    bridge = CvBridge()
+
     ## ----------------------------------------------------------------------
     ## Slider Solver Execution:
     ## ----------------------------------------------------------------------
-
-    bridge = CvBridge()
 
     try:
         marker_loading_start_time = time.time()
@@ -369,14 +383,9 @@ if __name__ == '__main__':
 
             # Optionally save results: annotated image.
             if save_output:
-                if not os.path.isdir(output_dir_path):
-                    rospy.loginfo(f'[slider_task_solver] Output directory'
-                                  f' {output_dir_path} does not exist!'
-                                  f' Creating now...')
-                    os.makedirs(output_dir_path)
-
-                cv2.imwrite(os.path.join(output_dir_path, 
-                                         'slider_task_solver_image.png'), 
+                detection_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                cv2.imwrite(os.path.join(output_dir_path,
+                                         f'slider_solver_image_{detection_str}.png'),
                             vis_image_array)
 
     except (KeyboardInterrupt, rospy.ROSInterruptException):
