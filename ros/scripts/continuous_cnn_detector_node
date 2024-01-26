@@ -9,13 +9,15 @@ Optionally runs the detector only after a ROS/UDP trigger message.
 import os
 import sys
 import time
+import json
 import signal
 import pickle
+import socket
 import datetime
 
+import cv2
 import rospy
 import rospkg
-import cv2
 import torch
 
 from cv_bridge import CvBridge, CvBridgeError
@@ -28,6 +30,12 @@ from eurobin_perception.image_detection import ImageDetector
 
 supported_torch_devices_ = ['cpu', 'gpu']
 triggered_ = False
+
+## ----------------------------------------------------------------------
+## UDP Parameters
+## ----------------------------------------------------------------------
+
+udp_buffer_size_ = 1024
 
 ## ----------------------------------------------------------------------
 ## ROS Callbacks and Message Initializations:
@@ -62,6 +70,9 @@ if __name__ == '__main__':
                                       os.path.join(package_path, 'output_data'))
     confidence_threshold = rospy.get_param('~confidence_threshold', 0.7)
     run_on_trigger = rospy.get_param('~run_on_trigger', False)
+    run_on_udp_trigger = rospy.get_param('~run_on_udp_trigger', True)
+    udp_ip = rospy.get_param('~udp_ip', 'localhost')
+    udp_port = rospy.get_param('~udp_port', 8000)
 
     image_topic = rospy.get_param('~image_topic', '/camera/color/image_raw')
     trigger_topic = rospy.get_param('~trigger_topic', 
@@ -95,6 +106,14 @@ if __name__ == '__main__':
         sys.exit(1)
     if device == 'gpu' and not torch.cuda.is_available():
         rospy.logerr('[cnn_detector] Could not detect gpu device! Terminating.')
+        sys.exit(1)
+
+    # Verify trigger setting (ROS OR UDP):
+    if run_on_trigger and run_on_udp_trigger:
+        rospy.logerr('[cnn_detector] Node supports trigger messages from' + \
+                     ' either ROS or UDP, but run_on_trigger and' + \
+                     ' run_on_udp_trigger were both set to true!')
+        rospy.logerr('[cnn_detector] Terminating.')
         sys.exit(1)
 
     # Set up output data directory:
@@ -138,12 +157,22 @@ if __name__ == '__main__':
 
     rospy.loginfo('[cnn_detector] Received first image message')
 
-    if not run_on_trigger:
-        rospy.loginfo('[cnn_detector] Continuously running detection on ' + \
-                      'incoming messages...')
+    if run_on_trigger:
+        rospy.loginfo(f'[cnn_detector] Will run detection on the latest '
+                      f'image message at every trigger ROS message on ' + \
+                      f'on topic {trigger_topic}...')
+    elif run_on_udp_trigger:
+        rospy.loginfo(f'[cnn_detector] Will run detection on the latest '
+                      f'image message at every trigger UDP message on ' + \
+                      f' over IP {udp_ip} and port {udp_port}...')
+
+        udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        udp_socket.settimeout(None)
+        udp_socket.bind((udp_ip, udp_port))
     else:
-        rospy.loginfo('[cnn_detector] Will run detection at every trigger ' + \
-                      'on the latest message...')
+        rospy.loginfo('[cnn_detector] Continuously running detection on ' + \
+                      'incoming image messages...')
+
     try:
         while not rospy.is_shutdown():
             if run_on_trigger:
@@ -153,6 +182,27 @@ if __name__ == '__main__':
                 while not triggered_:
                     rate.sleep()
                 triggered_ = False
+            elif run_on_udp_trigger:
+                # Note: the following will block until a message is received:
+                signal.signal(signal.SIGINT, signal.SIG_DFL);
+                udp_msg, udp_addr = udp_socket.recvfrom(udp_buffer_size_)
+
+                rospy.loginfo('[cnn_detector] Received trigger UDP message')
+                udp_msg_data = json.loads(udp_msg.decode())
+
+                try:
+                    if type(udp_msg_data["trigger"]).__name__ != 'bool' or \
+                            udp_msg_data['trigger'] != True:
+                        rospy.logwarn('[cnn_detector] Received invalid value' + \
+                                      ' in UDP message dict for key trigger:' + \
+                                     f' {udp_msg_data["trigger"]}. Will only' + \
+                                      ' trigger on "True". Ignoring... ')
+                        continue
+                except Exception as e:
+                    rospy.logwarn('[cnn_detector] Could not access trigger' + \
+                                  ' information in UDP message! Please check' + \
+                                 f' message format!. Ignoring...')
+                    continue
             else:
                 try:
                     rate.sleep()
