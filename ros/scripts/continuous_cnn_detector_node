@@ -29,7 +29,7 @@ from eurobin_perception.msg import BoundingBox, BoundingBoxList
 from eurobin_perception.image_detection import ImageDetector
 
 supported_torch_devices_ = ['cpu', 'gpu']
-triggered_ = False
+ros_triggered_ = False
 
 ## ----------------------------------------------------------------------
 ## UDP Parameters
@@ -48,10 +48,10 @@ def image_callback(msg):
     current_image_msg_ = msg
 
 def trigger_callback(msg):
-    global triggered_
+    global ros_triggered_
 
     rospy.loginfo('[cnn_detector] Received trigger ROS message')
-    triggered_ = msg.data
+    ros_triggered_ = msg.data
 
 
 if __name__ == '__main__':
@@ -69,7 +69,7 @@ if __name__ == '__main__':
     output_dir_path = rospy.get_param('~output_dir_path', 
                                       os.path.join(package_path, 'output_data'))
     confidence_threshold = rospy.get_param('~confidence_threshold', 0.7)
-    run_on_trigger = rospy.get_param('~run_on_trigger', False)
+    run_on_ros_trigger = rospy.get_param('~run_on_ros_trigger', False)
     run_on_udp_trigger = rospy.get_param('~run_on_udp_trigger', True)
     udp_ip = rospy.get_param('~udp_ip', 'localhost')
     udp_port = rospy.get_param('~udp_port', 8000)
@@ -85,7 +85,7 @@ if __name__ == '__main__':
                                           '/eurobin_perception/detection_result')
 
     image_subscriber = rospy.Subscriber(image_topic, Image, image_callback)
-    if run_on_trigger:
+    if run_on_ros_trigger:
         trigger_subscriber = rospy.Subscriber(trigger_topic, Bool, trigger_callback)
 
     publish_visual_output = rospy.get_param('~publish_visual_output', True)
@@ -109,9 +109,9 @@ if __name__ == '__main__':
         sys.exit(1)
 
     # Verify trigger setting (ROS OR UDP):
-    if run_on_trigger and run_on_udp_trigger:
+    if run_on_ros_trigger and run_on_udp_trigger:
         rospy.logerr('[cnn_detector] Node supports trigger messages from' + \
-                     ' either ROS or UDP, but run_on_trigger and' + \
+                     ' either ROS or UDP, but run_on_ros_trigger and' + \
                      ' run_on_udp_trigger were both set to true!')
         rospy.logerr('[cnn_detector] Terminating.')
         sys.exit(1)
@@ -157,7 +157,7 @@ if __name__ == '__main__':
 
     rospy.loginfo('[cnn_detector] Received first image message')
 
-    if run_on_trigger:
+    if run_on_ros_trigger:
         rospy.loginfo(f'[cnn_detector] Will run detection on the latest '
                       f'image message at every trigger ROS message on ' + \
                       f'on topic {trigger_topic}...')
@@ -175,13 +175,13 @@ if __name__ == '__main__':
 
     try:
         while not rospy.is_shutdown():
-            if run_on_trigger:
+            if run_on_ros_trigger:
                 # Note: using a signal SIGINT handler here because a try-except
                 # block does not work for the inner while loop (does not terminate cleanly).
                 signal.signal(signal.SIGINT, signal.SIG_DFL);
-                while not triggered_:
+                while not ros_triggered_:
                     rate.sleep()
-                triggered_ = False
+                ros_triggered_ = False
             elif run_on_udp_trigger:
                 # Note: the following will block until a message is received:
                 signal.signal(signal.SIGINT, signal.SIG_DFL);

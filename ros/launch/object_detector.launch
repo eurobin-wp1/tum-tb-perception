@@ -7,7 +7,7 @@
     <!-- <arg name="output_dir_path" default="$(find eurobin_perception)/output_data"/> -->
     <arg name="output_dir_path" default="/tmp"/>
     <arg name="confidence_threshold" default="0.7"/>
-    <arg name="run_on_trigger" default="false"/>
+    <arg name="run_on_ros_trigger" default="false"/>
     <arg name="run_on_udp_trigger" default="true"/>
     <arg name="udp_ip" default="localhost"/>
     <arg name="udp_port" default="8000"/>
@@ -27,7 +27,7 @@
         <param name="dataset_dir_path" type="str" value="$(arg dataset_dir_path)"/>
         <param name="output_dir_path" type="str" value="$(arg output_dir_path)"/>
         <param name="confidence_threshold" type="double" value="$(arg confidence_threshold)"/>
-        <param name="run_on_trigger" type="bool" value="$(arg run_on_trigger)"/>
+        <param name="run_on_ros_trigger" type="bool" value="$(arg run_on_ros_trigger)"/>
         <param name="run_on_udp_trigger" type="bool" value="$(arg run_on_udp_trigger)"/>
         <param name="udp_ip" type="str" value="$(arg udp_ip)"/>
         <param name="udp_port" type="int" value="$(arg udp_port)"/>
