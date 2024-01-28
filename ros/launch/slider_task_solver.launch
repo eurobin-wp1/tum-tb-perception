@@ -6,7 +6,7 @@
     <arg name="image_topic" default="/camera/color/image_raw"/>
     <!-- <arg name="image_topic" default="/eurobin_perception/dummy_lcd_images"/> -->
     <arg name="task_stage" default="1"/>
-    <arg name="detection_score_threshold" default="0.98"/>
+    <arg name="detection_score_threshold" default="0.7"/>
     <arg name="run_on_ros_trigger" default="false"/>
     <arg name="run_on_udp_trigger" default="true"/>
     <arg name="udp_ip" default="localhost"/>
