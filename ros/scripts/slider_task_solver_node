@@ -119,7 +119,7 @@ def load_template_images(image_dir_path,
 
     return template_images_dict
 
-def lcd_marker_to_slider_distance(estimated_pixel_distance, debug=False):
+def lcd_marker_to_slider_distance(estimated_pixel_distance):
     """
     Transforms the image-detected distance between two LCD markers to an 
     estimate of the distance required to move the slider to align the markers.
@@ -128,8 +128,6 @@ def lcd_marker_to_slider_distance(estimated_pixel_distance, debug=False):
     ----------
     estimated_pixel_distance: float
         Estimated distance between source and target LCD markers (pixels)
-    debug: bool
-        Whether to print some debugging messages
 
     Returns
     -------
@@ -539,7 +537,6 @@ if __name__ == '__main__':
 
                 estimated_slider_distance = lcd_marker_to_slider_distance(
                         estimated_pixel_distance, 
-                        debug=debug
                 )
 
                 slider_solution_msg = Float32()
