@@ -10,6 +10,7 @@ Note: the functionality provided by this node could be encapsulated in a
 ROS action in the future.
 
 Optionally runs the detector only after a ROS/UDP trigger message.
+Optionally saves all input and output (annotated with results) images.
 """
 
 import os
@@ -472,8 +473,12 @@ if __name__ == '__main__':
             if save_output:
                 detection_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
                 cv2.imwrite(os.path.join(output_dir_path,
-                                         f'slider_solver_image_{detection_str}.png'),
+                                         f'slider_solver_output_image_{detection_str}.png'),
                             vis_image_array)
+
+                cv2.imwrite(os.path.join(output_dir_path,
+                                         f'slider_solver_input_image_{detection_str}.png'),
+                            image_cv)
 
     except (KeyboardInterrupt, rospy.ROSInterruptException):
         rospy.loginfo('[slider_task_solver] Stopping node')
