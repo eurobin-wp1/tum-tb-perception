@@ -239,20 +239,9 @@ if __name__ == '__main__':
         input_image_publisher = rospy.Publisher(input_image_pub_topic, 
                                                 Image, queue_size=10)
 
-    # Check validity of task stage value:
-    if task_stage in task_stage_options_:
-        if task_stage == 1:
-            rospy.loginfo(f'[slider_task_solver] Running for task stage 1: ' + \
-                           'moving the red marker to the center white ' + \
-                           'marker.')
-        elif task_stage == 2:
-            rospy.loginfo(f'[slider_task_solver] Running for task stage 2: ' + \
-                       'moving the red marker to the green marker.')
-    else:
-        rospy.logerr(f'[slider_task_solver] Invalid value for task stage ' + \
-                      'parameter! Must be one of {task_stage_options_}')
-        sys.exit(1)
-
+    if not check_task_stage_value(task_stage):
+        rospy.logerr(f'[slider_task_solver] Invalid initial value for task stage ' + \
+                     f'parameter! Must be one of {task_stage_options_}')
 
     # Verify trigger setting (ROS OR UDP):
     if run_on_ros_trigger and run_on_udp_trigger:
@@ -287,26 +276,22 @@ if __name__ == '__main__':
         rospy.loginfo(f'[slider_task_solver] Loading marker templates...')
 
         # Load marker template images:
-        template_images_dict = load_template_images(
+        orig_template_images_dict = load_template_images(
                 template_source_image_dir_path, 
                 object_ids=['red', 'white_center', 'green'],
                 debug=debug
         )
         rospy.loginfo(f'[slider_task_solver] Found markers:')
-        for template_id, result_list in template_images_dict.items():
+        for template_id, result_list in orig_template_images_dict.items():
             rospy.loginfo(f'[slider_task_solver]   - {template_id}:' + \
                           f' {len(result_list )}')
 
         # Set parameters according to slider task stage:
         #   - Set initial and goal triangles' IDs
         #   - Ignore specific templates
-        template_images_dict = dict(template_images_dict)
-        if task_stage == 1:
-            initial_point_id, goal_point_id = 'red', 'white_center'
-            template_images_dict.pop('green')
-        elif task_stage == 2:
-            initial_point_id, goal_point_id = 'red', 'green'
-            template_images_dict.pop('white_center')
+        template_images_dict = dict(orig_template_images_dict)
+        template_images_dict, initial_point_id, goal_point_id = \
+            set_task_stage(task_stage, template_images_dict)
 
         elapsed_time = time.time() - marker_loading_start_time
         rospy.loginfo(f'[slider_task_solver] Finished in {elapsed_time:.3f}s')
@@ -370,6 +355,31 @@ if __name__ == '__main__':
                                   ' information in UDP message! Please check' + \
                                  f' message format!. Ignoring...')
                     continue
+
+                if 'task_stage' in udp_msg_data.keys():
+                    if type(udp_msg_data['task_stage']).__name__ != 'str':
+                        rospy.logwarn('[slider_task_solver] Received invalid value' + \
+                                      ' in UDP message dict for task_stage.' + \
+                                      ' Must be str. Ignoring... ')
+                        continue
+                    try:
+                        input_task_stage_value = int(udp_msg_data['task_stage'])
+                    except ValueError:
+                        rospy.logwarn('[slider_task_solver] Could not cast' + \
+                                      ' given task_stage to int:' + \
+                                     f' {input_task_stage_value }! Ignoring...')
+                        continue
+
+                if not check_task_stage_value(input_task_stage_value):
+                    rospy.logwarn(f'[slider_task_solver] Ignoring input value ' + \
+                            f'and using current default: {task_stage}')
+                else:
+                    task_stage = input_task_stage_value
+
+                template_images_dict = dict(orig_template_images_dict)
+                template_images_dict, initial_point_id, goal_point_id = \
+                    set_task_stage(task_stage, template_images_dict)
+
             else:
                 try:
                     rate.sleep()
