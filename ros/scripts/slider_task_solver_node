@@ -228,7 +228,8 @@ if __name__ == '__main__':
     run_on_ros_trigger = rospy.get_param('~run_on_ros_trigger', False)
     run_on_udp_trigger = rospy.get_param('~run_on_udp_trigger', True)
     udp_ip = rospy.get_param('~udp_ip', 'localhost')
-    udp_port = rospy.get_param('~udp_port', 8000)
+    udp_trigger_port = rospy.get_param('~udp_trigger_port', 8000)
+    udp_output_port = rospy.get_param('~udp_output_port', 7000)
 
     image_topic = rospy.get_param('~image_topic', '/camera/color/image_raw')
     trigger_topic = rospy.get_param('~trigger_topic',
@@ -288,6 +289,16 @@ if __name__ == '__main__':
     bridge = CvBridge()
 
     ## ----------------------------------------------------------------------
+    ## UDP Initializations
+    ## ----------------------------------------------------------------------
+
+    rospy.loginfo(f'[slider_task_solver] Initializing UDP socket with address' + \
+                  f' family AF_INET and type SOCK_DGRAM')
+    rospy.loginfo(f'[slider_task_solver] Will send output messages over IP {udp_ip}' + \
+                  f' and port {udp_output_port}.')
+    udp_output_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+    ## ----------------------------------------------------------------------
     ## Slider Solver Execution:
     ## ----------------------------------------------------------------------
 
@@ -327,7 +338,6 @@ if __name__ == '__main__':
             sys.exit(0)
 
         rospy.loginfo('[slider_task_solver] Received first image message')
-
         rospy.loginfo(f'[slider_task_solver] Will estimate solution distance ' + \
                        'for every image message.')
 
@@ -338,11 +348,11 @@ if __name__ == '__main__':
         elif run_on_udp_trigger:
             rospy.loginfo(f'[slider_task_solver] Will estimate solution distance '
                           f'on the latest image message at every trigger ' + \
-                          f'UDP message over IP {udp_ip} and port {udp_port}...')
+                          f'UDP message over IP {udp_ip} and port {udp_trigger_port}...')
 
-            udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            udp_socket.settimeout(None)
-            udp_socket.bind((udp_ip, udp_port))
+            udp_trigger_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            udp_trigger_socket.settimeout(None)
+            udp_trigger_socket.bind((udp_ip, udp_trigger_port))
         else:
             rospy.loginfo(f'[slider_task_solver] Will estimate solution distance ' + \
                            'for every incoming image message...')
@@ -358,7 +368,7 @@ if __name__ == '__main__':
             elif run_on_udp_trigger:
                 # Note: the following will block until a message is received:
                 signal.signal(signal.SIGINT, signal.SIG_DFL);
-                udp_msg, udp_addr = udp_socket.recvfrom(udp_buffer_size_)
+                udp_msg, udp_addr = udp_trigger_socket.recvfrom(udp_buffer_size_)
 
                 rospy.loginfo('[slider_task_solver] Received trigger UDP message')
                 udp_msg_data = json.loads(udp_msg.decode())
@@ -551,6 +561,17 @@ if __name__ == '__main__':
                     rospy.loginfo(f'[slider_task_solver] Estimated distance ' + \
                                   f'to move the slider to solve the task: ' + \
                                   f'{estimated_slider_distance }.')
+
+                # Send result over UDP socket:
+                rospy.loginfo(f'[slider_task_solver] Sending estimation result ' + \
+                              f' over UDP...')
+                output_dict = {'slider_motion_distance': str(estimated_slider_distance)}
+                udp_message = json.dumps(output_dict, indent = 4)
+
+                if debug:
+                    print(f'[DEBUG] UDP message: \n{udp_message}')
+                udp_message = udp_message.encode()
+                udp_output_socket.sendto(udp_message, (udp_ip, udp_output_port))
 
             if publish_visual_output:
                 debug_image_msg = bridge.cv2_to_imgmsg(vis_image_array, 
