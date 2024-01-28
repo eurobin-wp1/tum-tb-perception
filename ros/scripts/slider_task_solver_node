@@ -294,8 +294,8 @@ if __name__ == '__main__':
                 udp_msg_data = json.loads(udp_msg.decode())
 
                 try:
-                    if type(udp_msg_data["trigger"]).__name__ != 'bool' or \
-                            udp_msg_data['trigger'] != True:
+                    if type(udp_msg_data['trigger']).__name__ != 'str' or \
+                            udp_msg_data['trigger'] != "True":
                         rospy.logwarn('[slider_task_solver] Received invalid value' + \
                                       ' in UDP message dict for key trigger:' + \
                                      f' {udp_msg_data["trigger"]}. Will only' + \
