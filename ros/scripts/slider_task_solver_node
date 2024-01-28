@@ -177,13 +177,13 @@ if __name__ == '__main__':
 
     # Check validity of task stage value:
     if task_stage in task_stage_options_:
-            if task_stage == 1:
-                rospy.loginfo(f'[slider_task_solver] Running for task stage 1: ' + \
-                               'moving the red marker to the center white ' + \
-                               'marker.')
-            elif task_stage == 2:
-                rospy.loginfo(f'[slider_task_solver] Running for task stage 2: ' + \
-                           'moving the red marker to the green marker.')
+        if task_stage == 1:
+            rospy.loginfo(f'[slider_task_solver] Running for task stage 1: ' + \
+                           'moving the red marker to the center white ' + \
+                           'marker.')
+        elif task_stage == 2:
+            rospy.loginfo(f'[slider_task_solver] Running for task stage 2: ' + \
+                       'moving the red marker to the green marker.')
     else:
         rospy.logerr(f'[slider_task_solver] Invalid value for task stage ' + \
                       'parameter! Must be one of {task_stage_options_}')
