@@ -10,6 +10,8 @@ Note: the functionality provided by this node could be encapsulated in a
 ROS action in the future.
 
 Optionally runs the detector only after a ROS/UDP trigger message.
+(Note: can set task_stage with every UDP message; not yet implemented
+for ROS trigger messages.)
 Optionally saves all input and output (annotated with results) images.
 """
 
