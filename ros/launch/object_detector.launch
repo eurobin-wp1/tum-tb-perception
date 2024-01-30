@@ -10,7 +10,7 @@
     <arg name="run_on_ros_trigger" default="false"/>
     <arg name="run_on_udp_trigger" default="true"/>
     <arg name="udp_ip" default="localhost"/>
-    <arg name="udp_trigger_port" default="6000"/>
+    <arg name="udp_trigger_port" default="5000"/>
     <arg name="image_topic" default="/camera/color/image_raw"/>
     <arg name="trigger_topic" default="/eurobin_perception/detector_trigger"/>
     <arg name="image_pub_topic" default="/eurobin_perception/detection_images"/>
