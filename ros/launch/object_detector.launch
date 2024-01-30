@@ -10,7 +10,7 @@
     <arg name="run_on_ros_trigger" default="false"/>
     <arg name="run_on_udp_trigger" default="true"/>
     <arg name="udp_ip" default="localhost"/>
-    <arg name="udp_port" default="8000"/>
+    <arg name="udp_trigger_port" default="6000"/>
     <arg name="image_topic" default="/camera/color/image_raw"/>
     <arg name="trigger_topic" default="/eurobin_perception/detector_trigger"/>
     <arg name="image_pub_topic" default="/eurobin_perception/detection_images"/>
@@ -30,7 +30,7 @@
         <param name="run_on_ros_trigger" type="bool" value="$(arg run_on_ros_trigger)"/>
         <param name="run_on_udp_trigger" type="bool" value="$(arg run_on_udp_trigger)"/>
         <param name="udp_ip" type="str" value="$(arg udp_ip)"/>
-        <param name="udp_port" type="int" value="$(arg udp_port)"/>
+        <param name="udp_trigger_port" type="int" value="$(arg udp_trigger_port)"/>
         <param name="image_topic" type="str" value="$(arg image_topic)"/>
         <param name="trigger_topic" type="str" value="$(arg trigger_topic)"/>
         <param name="image_pub_topic" type="str" value="$(arg image_pub_topic)"/>
