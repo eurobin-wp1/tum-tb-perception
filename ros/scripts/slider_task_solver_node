@@ -230,8 +230,8 @@ if __name__ == '__main__':
     run_on_ros_trigger = rospy.get_param('~run_on_ros_trigger', False)
     run_on_udp_trigger = rospy.get_param('~run_on_udp_trigger', True)
     udp_ip = rospy.get_param('~udp_ip', 'localhost')
-    udp_trigger_port = rospy.get_param('~udp_trigger_port', 8000)
-    udp_output_port = rospy.get_param('~udp_output_port', 7000)
+    udp_trigger_port = rospy.get_param('~udp_trigger_port', 7000)
+    udp_output_port = rospy.get_param('~udp_output_port', 8000)
 
     image_topic = rospy.get_param('~image_topic', '/camera/color/image_raw')
     trigger_topic = rospy.get_param('~trigger_topic',

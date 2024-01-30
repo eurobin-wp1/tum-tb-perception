@@ -10,8 +10,8 @@
     <arg name="run_on_ros_trigger" default="false"/>
     <arg name="run_on_udp_trigger" default="true"/>
     <arg name="udp_ip" default="localhost"/>
-    <arg name="udp_trigger_port" default="8000"/>
-    <arg name="udp_output_port" default="7000"/>
+    <arg name="udp_trigger_port" default="7000"/>
+    <arg name="udp_output_port" default="8000"/>
     <arg name="image_pub_topic" default="/eurobin_perception/slider_solver_images"/>
     <arg name="trigger_topic" default="/eurobin_perception/silder_solver_trigger"/>
     <arg name="input_image_pub_topic" default="/eurobin_perception/slider_solver_input_images"/>
