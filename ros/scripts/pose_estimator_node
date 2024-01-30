@@ -72,13 +72,6 @@ def camera_info_callback(msg):
 object_marker_publisher_ = None
 
 ## ----------------------------------------------------------------------
-## UDP Parameters
-## ----------------------------------------------------------------------
-
-udp_ip_ = '127.0.0.1'
-udp_port_ = 9000
-
-## ----------------------------------------------------------------------
 ## Functions:
 ## ----------------------------------------------------------------------
 
@@ -174,6 +167,8 @@ if __name__ == '__main__':
                                       os.path.join(package_path, 'output_data'))
     taskboard_frame_name = rospy.get_param('~taskboard_frame_name', 'taskboard_frame')
     num_retries = rospy.get_param('~num_retries', 3)
+    udp_ip = rospy.get_param('~udp_ip', 'localhost')
+    udp_output_port = rospy.get_param('~udp_output_port', 6000)
 
     pointcloud_topic = rospy.get_param('~pointcloud_topic', '/camera/depth/color/points')
     camera_info_topic = rospy.get_param('~camera_info_topic', '/camera/color/camera_info')
@@ -201,9 +196,9 @@ if __name__ == '__main__':
 
     rospy.loginfo(f'[pose_estimator] Initializing UDP socket with address' + \
                   f' family AF_INET and type SOCK_DGRAM')
-    rospy.loginfo(f'[pose_estimator] Will send messages over IP {udp_ip_}' + \
-                  f' and port {udp_port_}.')
-    udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    rospy.loginfo(f'[pose_estimator] Will send messages over IP {udp_ip}' + \
+                  f' and port {udp_output_port}.')
+    udp_output_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     ## ----------------------------------------------------------------------
     ## Estimator Execution:
@@ -728,7 +723,7 @@ if __name__ == '__main__':
                 if debug:
                     print(f'[DEBUG] UDP message: \n{udp_message}')
                 udp_message = udp_message.encode()
-                udp_socket.sendto(udp_message, (udp_ip_, udp_port_))
+                udp_output_socket.sendto(udp_message, (udp_ip, udp_output_port))
 
             rate.sleep()
     except (KeyboardInterrupt, rospy.ROSInterruptException):
