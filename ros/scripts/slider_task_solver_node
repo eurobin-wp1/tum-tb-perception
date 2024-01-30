@@ -403,11 +403,11 @@ if __name__ == '__main__':
                                      f' {input_task_stage_value }! Ignoring...')
                         continue
 
-                if not check_task_stage_value(input_task_stage_value):
-                    rospy.logwarn(f'[slider_task_solver] Ignoring input value ' + \
-                            f'and using current default: {task_stage}')
-                else:
-                    task_stage = input_task_stage_value
+                    if not check_task_stage_value(input_task_stage_value):
+                        rospy.logwarn(f'[slider_task_solver] Ignoring input value ' + \
+                                f'and using current default: {task_stage}')
+                    else:
+                        task_stage = input_task_stage_value
 
                 template_images_dict = dict(orig_template_images_dict)
                 template_images_dict, initial_point_id, goal_point_id = \
