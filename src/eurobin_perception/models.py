@@ -8,24 +8,21 @@ import torchvision
 
 from eurobin_perception.dataset import TaskboardDataset
 
-tb_dataset_path_ = '/home/ahmed/tum/workspace/euRobin/detection_task/dataset'
-
-def get_tb_cnn_model():
+def get_tb_cnn_model(num_classes):
     """
     Initializes and returns a FastRCNN CNN model that is configured for the
     number of classes in the taskboard dataset.
 
     Parameters
     ----------
-    None
+    num_classes: int
+        Number of classes that the model should expect
 
     Returns
     -------
     model: torchvision.models.detection.faster_rcnn.FasterRCNN
         FasterRCNN model object
     """
-    tb_dataset = TaskboardDataset(root=tb_dataset_path_)
-    num_classes = tb_dataset.get_num_classes()
 
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(weights="DEFAULT")
     in_features = model.roi_heads.box_predictor.cls_score.in_features
