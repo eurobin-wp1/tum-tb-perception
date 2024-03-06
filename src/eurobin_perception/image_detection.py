@@ -54,7 +54,7 @@ class ImageDetector(object):
         """
         print(f'[INFO] [{self.name}] Loading pretrained Faster R-CNN model' + \
               f' from: {self.model_weights_file_path}')
-        self.model = get_tb_cnn_model()
+        self.model = get_tb_cnn_model(self.dataset.get_num_classes())
         self.model.load_state_dict(torch.load(self.model_weights_file_path, 
                                               map_location=self.device))
         self.model.eval()
