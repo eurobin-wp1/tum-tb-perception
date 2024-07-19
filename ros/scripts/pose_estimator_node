@@ -173,7 +173,8 @@ if __name__ == '__main__':
     pointcloud_topic = rospy.get_param('~pointcloud_topic', '/camera/depth/color/points')
     camera_info_topic = rospy.get_param('~camera_info_topic', '/camera/color/camera_info')
     detector_result_topic = rospy.get_param('~detector_result_topic', '/eurobin_perception/detection_result')
-    object_list_pub_topic = rospy.get_param('~object_list_pub_topic', '/eurobin_perception/object_positions')
+    object_positions_pub_topic = rospy.get_param('~object_positions_pub_topic', '/eurobin_perception/object_positions')
+    object_poses_pub_topic = rospy.get_param('~object_poses_pub_topic', '/eurobin_perception/object_poses')
     object_marker_pub_topic = rospy.get_param('~object_marker_pub_topic', '/eurobin_perception/object_markers')
     cropped_pc_pub_topic = rospy.get_param('~cropped_pc_pub_topic', '/eurobin_perception/cropped_pc')
 
@@ -184,7 +185,8 @@ if __name__ == '__main__':
     detector_result_subscriber = rospy.Subscriber(detector_result_topic, BoundingBoxList, detection_callback)
     camera_info_subscriber = rospy.Subscriber(camera_info_topic, CameraInfo, camera_info_callback)
 
-    object_list_publisher = rospy.Publisher(object_list_pub_topic, ObjectList, queue_size=10)
+    object_positions_publisher = rospy.Publisher(object_positions_pub_topic, ObjectList, queue_size=10)
+    object_poses_publisher = rospy.Publisher(object_poses_pub_topic, ObjectList, queue_size=10)
     object_marker_publisher_ = rospy.Publisher(object_marker_pub_topic, MarkerArray, queue_size=10)
     cropped_pc_debug_publisher = rospy.Publisher(cropped_pc_pub_topic, PointCloud, queue_size=10)
 
@@ -285,7 +287,7 @@ if __name__ == '__main__':
                         marker_array_msg.markers.append(marker_msg)
                         marker_array_msg.markers.append(text_marker_msg)
 
-                    object_list_publisher.publish(object_list_msg)
+                    object_positions_publisher.publish(object_list_msg)
                     object_marker_publisher_.publish(marker_array_msg)
 
                     cropped_pc_debug_publisher.publish(cropped_pc_msg)
@@ -712,7 +714,7 @@ if __name__ == '__main__':
                         tf_msg.transform.rotation = tb_quaternion
                         tf_broadcaster.sendTransform(tf_msg)
 
-                    object_list_publisher.publish(updated_object_list_msg)
+                    object_poses_publisher.publish(updated_object_list_msg)
 
                     udp_object_list_msg = updated_object_list_msg
                 else:

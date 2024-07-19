@@ -10,7 +10,8 @@
     <arg name="point_cloud_topic" default="/camerka/depth/color/points"/>
     <arg name="camera_info_topic" default="/camera/color/camera_info"/>
     <arg name="detector_result_topic" default="/eurobin_perception/detection_result"/>
-    <arg name="object_list_pub_topic" default="/eurobin_perception/object_positions"/>
+    <arg name="object_positions_pub_topic" default="/eurobin_perception/object_positions"/>
+    <arg name="object_poses_pub_topic" default="/eurobin_perception/object_poses"/>
     <arg name="object_marker_pub_topic" default="/eurobin_perception/object_markers"/>
     <arg name="cropped_pc_pub_topic" default="/eurobin_perception/cropped_pc"/>
     <arg name="save_output" default="false"/>
@@ -27,7 +28,8 @@
         <param name="point_cloud_topic" type="str" value="$(arg point_cloud_topic)"/>
         <param name="camera_info_topic" type="str" value="$(arg camera_info_topic)"/>
         <param name="detector_result_topic" type="str" value="$(arg detector_result_topic)"/>
-        <param name="object_list_pub_topic" type="str" value="$(arg object_list_pub_topic)"/>
+        <param name="object_positions_pub_topic" type="str" value="$(arg object_positions_pub_topic)"/>
+        <param name="object_poses_pub_topic" type="str" value="$(arg object_poses_pub_topic)"/>
         <param name="object_marker_pub_topic" type="str" value="$(arg object_marker_pub_topic)"/>
         <param name="cropped_pc_pub_topic" type="str" value="$(arg cropped_pc_pub_topic)"/>
         <param name="save_output" type="bool" value="$(arg save_output)"/>
