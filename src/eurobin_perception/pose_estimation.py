@@ -222,7 +222,12 @@ def convert_object_points_to_arrays(point_lists_dict):
     """
     point_arrays_dict = {}
     for label in point_lists_dict.keys():
-        point_arrays_dict[label] = np.stack(point_lists_dict[label])
+        try:
+            point_arrays_dict[label] = np.stack(point_lists_dict[label])
+        except ValueError:
+            print(f'[pose_estimator] [WARN] No points to extract for label {label}!')
+            print(f'[pose_estimator] [WARN] Skipping label {label}...')
+            continue
 
     return point_arrays_dict 
 

@@ -72,13 +72,6 @@ def camera_info_callback(msg):
 object_marker_publisher_ = None
 
 ## ----------------------------------------------------------------------
-## UDP Parameters
-## ----------------------------------------------------------------------
-
-udp_ip_ = '127.0.0.1'
-udp_port_ = 9000
-
-## ----------------------------------------------------------------------
 ## Functions:
 ## ----------------------------------------------------------------------
 
@@ -174,11 +167,14 @@ if __name__ == '__main__':
                                       os.path.join(package_path, 'output_data'))
     taskboard_frame_name = rospy.get_param('~taskboard_frame_name', 'taskboard_frame')
     num_retries = rospy.get_param('~num_retries', 3)
+    udp_ip = rospy.get_param('~udp_ip', 'localhost')
+    udp_output_port = rospy.get_param('~udp_output_port', 6000)
 
     pointcloud_topic = rospy.get_param('~pointcloud_topic', '/camera/depth/color/points')
     camera_info_topic = rospy.get_param('~camera_info_topic', '/camera/color/camera_info')
     detector_result_topic = rospy.get_param('~detector_result_topic', '/eurobin_perception/detection_result')
-    object_list_pub_topic = rospy.get_param('~object_list_pub_topic', '/eurobin_perception/object_positions')
+    object_positions_pub_topic = rospy.get_param('~object_positions_pub_topic', '/eurobin_perception/object_positions')
+    object_poses_pub_topic = rospy.get_param('~object_poses_pub_topic', '/eurobin_perception/object_poses')
     object_marker_pub_topic = rospy.get_param('~object_marker_pub_topic', '/eurobin_perception/object_markers')
     cropped_pc_pub_topic = rospy.get_param('~cropped_pc_pub_topic', '/eurobin_perception/cropped_pc')
 
@@ -189,7 +185,8 @@ if __name__ == '__main__':
     detector_result_subscriber = rospy.Subscriber(detector_result_topic, BoundingBoxList, detection_callback)
     camera_info_subscriber = rospy.Subscriber(camera_info_topic, CameraInfo, camera_info_callback)
 
-    object_list_publisher = rospy.Publisher(object_list_pub_topic, ObjectList, queue_size=10)
+    object_positions_publisher = rospy.Publisher(object_positions_pub_topic, ObjectList, queue_size=10)
+    object_poses_publisher = rospy.Publisher(object_poses_pub_topic, ObjectList, queue_size=10)
     object_marker_publisher_ = rospy.Publisher(object_marker_pub_topic, MarkerArray, queue_size=10)
     cropped_pc_debug_publisher = rospy.Publisher(cropped_pc_pub_topic, PointCloud, queue_size=10)
 
@@ -201,9 +198,9 @@ if __name__ == '__main__':
 
     rospy.loginfo(f'[pose_estimator] Initializing UDP socket with address' + \
                   f' family AF_INET and type SOCK_DGRAM')
-    rospy.loginfo(f'[pose_estimator] Will send messages over IP {udp_ip_}' + \
-                  f' and port {udp_port_}.')
-    udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    rospy.loginfo(f'[pose_estimator] Will send messages over IP {udp_ip}' + \
+                  f' and port {udp_output_port}.')
+    udp_output_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     ## ----------------------------------------------------------------------
     ## Estimator Execution:
@@ -248,7 +245,12 @@ if __name__ == '__main__':
                     object_points_dict = convert_object_points_to_arrays(object_points_dict)
 
                     # Copy unfiltered taskboard data for later visualizations:
-                    unfiltered_points_array = object_points_dict['taskboard'].copy()
+                    try:
+                        unfiltered_points_array = object_points_dict['taskboard'].copy()
+                    except KeyError:
+                        rospy.logwarn('[pose_estimator] Did not find taskboard in detection result message!')
+                        rospy.logwarn('[pose_estimator] Skipping pose estimation...')
+                        continue
 
                     # Remove outliers using IQR method:
                     for object_id, points_array in object_points_dict.items():
@@ -285,7 +287,7 @@ if __name__ == '__main__':
                         marker_array_msg.markers.append(marker_msg)
                         marker_array_msg.markers.append(text_marker_msg)
 
-                    object_list_publisher.publish(object_list_msg)
+                    object_positions_publisher.publish(object_list_msg)
                     object_marker_publisher_.publish(marker_array_msg)
 
                     cropped_pc_debug_publisher.publish(cropped_pc_msg)
@@ -409,7 +411,7 @@ if __name__ == '__main__':
                         if quadrant_corner_ids['4'] == None or \
                                 quadrant_corner_ids['4'] == quadrant_corner_ids['1'] or \
                                 quadrant_corner_ids['4'] == quadrant_corner_ids['2']:
-                            rospy.logerr('[pose_estimator] Using test heuristic to determine quadrant 4...')
+                            rospy.logwarn('[pose_estimator] Using test heuristic to determine quadrant 4...')
                             q1_coordinates = rect_rectified_corners[quadrant_corner_ids['1']]
                             q2_coordinates = rect_rectified_corners[quadrant_corner_ids['2']]
                             corner_distances = np.linalg.norm(rect_rectified_corners - q1_coordinates, axis=1)
@@ -712,7 +714,7 @@ if __name__ == '__main__':
                         tf_msg.transform.rotation = tb_quaternion
                         tf_broadcaster.sendTransform(tf_msg)
 
-                    object_list_publisher.publish(updated_object_list_msg)
+                    object_poses_publisher.publish(updated_object_list_msg)
 
                     udp_object_list_msg = updated_object_list_msg
                 else:
@@ -728,7 +730,7 @@ if __name__ == '__main__':
                 if debug:
                     print(f'[DEBUG] UDP message: \n{udp_message}')
                 udp_message = udp_message.encode()
-                udp_socket.sendto(udp_message, (udp_ip_, udp_port_))
+                udp_output_socket.sendto(udp_message, (udp_ip, udp_output_port))
 
             rate.sleep()
     except (KeyboardInterrupt, rospy.ROSInterruptException):
