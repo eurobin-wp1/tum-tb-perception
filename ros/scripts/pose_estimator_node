@@ -422,7 +422,6 @@ if __name__ == '__main__':
                         quadrant_corner_ids['3'] = None
                         corner_quadrant_ids = dict(zip(quadrant_corner_ids.values(), quadrant_corner_ids.keys()))
 
-                        # TODO: Remove convenience data copy:
                         rect_corners = rect_rectified_corners.copy()
 
                         if debug:
