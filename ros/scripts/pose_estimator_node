@@ -360,18 +360,17 @@ if __name__ == '__main__':
 
                         # Get best-fit plane normal:
                         eigenvectors_eigh = np.linalg.eigh(np.cov(tb_points_array.T))[1]
-                        plane_normal_eigh = eigenvectors_eigh[:, 0]
-                        # If z coordinate is negative, invert the vector to rectify
-                        # the resultant axes:
-                        if plane_normal_eigh[2] < 0.:
-                            plane_normal_eigh = -plane_normal_eigh 
+                        plane_normal_eigenvector = eigenvectors_eigh[:, 0]
+                        # If z coordinate is negative, invert the vector to rectify the resultant axes:
+                        if plane_normal_eigenvector[2] < 0.:
+                            plane_normal_eigenvector = -plane_normal_eigenvector 
 
                         ## ----------------------------------------
                         ## Fitting Minimum Bounding Rectangle on Planar Data:
                         ## ----------------------------------------
 
                         # Estimate minimum bounding rectangle on data projected onto best-fit plane:
-                        rot_matrix = rotation_matrix_from_vectors([0, 0, 1], plane_normal_eigh)
+                        rot_matrix = rotation_matrix_from_vectors([0, 0, 1], plane_normal_eigenvector)
                         points_oriented_array = tb_points_array @ rot_matrix
 
                         rect_oriented_corners = minimum_bounding_rectangle(points_oriented_array[:, :2])
@@ -443,7 +442,7 @@ if __name__ == '__main__':
                             print(f'\n[DEBUG] Quadrant corner IDs:\n{quadrant_corner_ids}')
                             print(f'[DEBUG] Corner quadrant IDs:\n{corner_quadrant_ids}')
 
-                            print(f'\n[DEBUG] Estimated best-fit plane normal vector:\n{plane_normal_eigh}')
+                            print(f'\n[DEBUG] Estimated best-fit plane normal vector:\n{plane_normal_eigenvector}')
 
                         # Estimate first orientation vector:
                         if quadrant_corner_ids['1'] is not None and quadrant_corner_ids['2'] is not None:
@@ -474,10 +473,10 @@ if __name__ == '__main__':
                         orientation_vectors = np.stack((orientation_vector_1 / np.linalg.norm(orientation_vector_1),
                                                         orientation_vector_2 / np.linalg.norm(orientation_vector_2)))
 
-                        tb_orientation_matrix = np.vstack((orientation_vectors, plane_normal_eigh))
+                        tb_orientation_matrix = np.vstack((orientation_vectors, plane_normal_eigenvector))
 
                         # Verify that the estimated orientation vectors are both perpendicular to the plane normal vector:
-                        if not all((orientation_vectors[:, :] @ plane_normal_eigh) < 1e-10):
+                        if not all((orientation_vectors[:, :] @ plane_normal_eigenvector) < 1e-10):
                             rospy.logerr('[pose_estimator] Estimated orientation vectors are not orthogonal! Orientation matrix:\n {}'.format(tb_orientation_matrix))
                             rospy.loginfo(f'[pose_estimator] Will re-attempt to estimate orientation...')
                             continue
@@ -545,7 +544,7 @@ if __name__ == '__main__':
 
                         # Best-fit plane's normal vector:
                         scale = arrow_scale_factor
-                        end_point = plane_normal_eigh * scale
+                        end_point = plane_normal_eigenvector * scale
                         ax.arrow3D(*tb_position, *end_point, mutation_scale=10)
                         ax.annotate3D('Plane Normal',
                                       xyz=end_point + tb_position + (scale * .0),
@@ -558,8 +557,8 @@ if __name__ == '__main__':
                                                 tb_points_array.max(axis=(0))[:2]))
                         xx, yy = np.meshgrid(np.linspace(plane_bounds[0][0], plane_bounds[0][1], 10),
                                              np.linspace(plane_bounds[1][0], plane_bounds[1][1], 10))
-                        A, B, C = plane_normal_eigh
-                        D = -tb_position @ plane_normal_eigh
+                        A, B, C = plane_normal_eigenvector
+                        D = -tb_position @ plane_normal_eigenvector
                         zz = (-(A * xx) - (B * yy) - D) / C
                         ax.plot_surface(xx, yy, zz, alpha=0.3, facecolor='grey',
                                         color='black', cstride=3, rstride=3,)
