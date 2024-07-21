@@ -348,7 +348,11 @@ if __name__ == '__main__':
 
                         rospy.loginfo(f'[pose_estimator] Removing TB PC outliers' + \
                                       f' using agglomerative clustering...')
+                        tb_pc_outlier_removal_start_time = time.time()
                         tb_points_array = remove_outliers_agglomerative(tb_points_array, debug=debug)
+                        if debug:
+                            elapsed_time = time.time() - tb_pc_outlier_removal_start_time
+                            print(f'[DEBUG] [pose_estimator] Removed TB PC outliers in {elapsed_time:.2f}s')
 
                         ## ----------------------------------------
                         ## Extracting Normal of Best-Fit Plane:
