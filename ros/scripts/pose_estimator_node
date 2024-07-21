@@ -491,13 +491,11 @@ if __name__ == '__main__':
                             continue
 
                         if debug:
-                            print('\n[DEBUG] Orientation vector 1 (normalized):')
-                            print(orientation_vectors[0, :])
-                            print('[DEBUG] Orientation vector 2 (normalized):')
-                            print(orientation_vectors[1, :])
+                            print(f'\n[DEBUG] Orientation vector 1 (normalized):\n{orientation_vectors[0, :]}')
+                            print(f'[DEBUG] Orientation vector 2 (normalized):\n{orientation_vectors[1, :]}')
 
-                            print('\n[DEBUG] Taskboard orientation matrix:'); print(tb_orientation_matrix)
-                            print('[DEBUG] Taskboard surface tb_position position:'); print(tb_position)
+                            print(f'\n[DEBUG] Taskboard orientation matrix:\n{tb_orientation_matrix}')
+                            print(f'[DEBUG] Taskboard surface tb_position position:\n{tb_position}')
 
                         elapsed_time = time.time() - tb_orientation_estimation_start_time
                         rospy.loginfo(f'[pose_estimator] Estimated taskboard orientation in {elapsed_time:.2f}s')
