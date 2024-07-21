@@ -461,15 +461,22 @@ class PositionEstimator(object):
             if debug:
                 print(f'\n[DEBUG] [{self.name}] Removing outliers from {object_id} points...')
 
-            percentiles = (35, 65) if object_id == 'taskboard' \
-                            else (25, 75)
+            percentiles = (35, 65) if object_id == 'taskboard' else (25, 75)
             filtered_points_array = remove_outliers(points_array,
                                                     percentiles=percentiles,
                                                     debug=debug)
             object_points_dict[object_id] = filtered_points_array
 
-        object_positions_dict = estimate_object_positions(object_points_dict, 
-                                                          debug=debug)
+        # Estimates the 3D positions of objects from lists of corresponding points.
+        # By default, positions are estimated through the mean of points.
+        object_positions_dict = {}
+        for label, points_array in object_points_dict.items():
+            object_positions_dict[label] = points_array.mean(axis=0)
+            if debug:
+                print('[DEBUG] Label: {}'.format(label))
+                print('[DEBUG] Points mean:', points_array.mean(axis=0))
+                print('[DEBUG] Points std:', points_array.std(axis=0))
+                print()
 
         return (object_positions_dict, object_points_dict,
                 cropped_pc_points, unfiltered_points_array) 
