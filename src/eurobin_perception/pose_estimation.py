@@ -382,12 +382,9 @@ class PositionEstimator(object):
             Mapping between labels and lists of corresponding points (contained
             in objects whose types will depend on the input pc_points, e.g.: 
             sensor_msgs.point_cloud2.Point, list, ndarray).
-        cropped_pc_points: list
-            Cropped point cloud set of 3D points
         """
         f_x, f_y = camera_params_dict['f_x'], camera_params_dict['f_y']
         c_x, c_y = camera_params_dict['c_x'], camera_params_dict['c_y']
-        cropped_pc_points = []
 
         # Find and store the 3D points that fall within each detection BB using the 3D-to-2D back-projection method:
         object_points_dict = {}
@@ -407,15 +404,11 @@ class PositionEstimator(object):
                 if u > bbox['xmin'] and u < bbox['xmax'] and v > bbox['ymin'] and v < bbox['ymax']:
                     object_points_dict[bbox['class']].append(point)
 
-                    # Add the point to the "cropped point cloud" (visualization for debugging):
-                    if bbox['class'] == cropped_pc_label:
-                        cropped_pc_points.append(list(point))
-
         if debug:
             iteration_time = time.time() - point_iter_start_time
             print(f'[DEBUG] [{self.name}] Iterated over all points for all labels in {iteration_time:.2f}s')
 
-        return object_points_dict, cropped_pc_points
+        return object_points_dict
 
     def estimate_object_positions(self, bbox_dict_list, pc_point_list, 
                                   cropped_pc_label=None, debug=False):
@@ -440,7 +433,7 @@ class PositionEstimator(object):
         -------
         TODO
         """
-        object_points_dict, cropped_pc_points = \
+        object_points_dict = \
             self.get_point_cloud_segments(
                 pc_points=pc_point_list,
                 bbox_dict_list=bbox_dict_list,
@@ -452,9 +445,9 @@ class PositionEstimator(object):
 
         if debug:
             # Copy unfiltered taskboard data for later visualizations:
-            unfiltered_points_array = object_points_dict[cropped_pc_label].copy()
+            cropped_pc_points_array = object_points_dict[cropped_pc_label].copy()
         else:
-            unfiltered_points_array = None
+            cropped_pc_points_array = None
 
         # Remove outliers using IQR method:
         for object_id, points_array in object_points_dict.items():
@@ -479,7 +472,7 @@ class PositionEstimator(object):
                 print()
 
         return (object_positions_dict, object_points_dict,
-                cropped_pc_points, unfiltered_points_array) 
+                cropped_pc_points_array) 
 
     def load_camera_params(self, camera_params_dict):
         """
