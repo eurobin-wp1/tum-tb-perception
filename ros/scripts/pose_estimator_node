@@ -144,7 +144,7 @@ def clear_object_markers():
 
     marker_msg = Marker()
     marker_msg.id = object_marker_id_ 
-    marker_msg.action = 3                                     # Delete all
+    marker_msg.action = 3                                   # Delete all
 
     marker_array_msg.markers.append(marker_msg)
     object_marker_publisher_.publish(marker_array_msg)
@@ -340,8 +340,7 @@ if __name__ == '__main__':
 
                         rospy.loginfo(f'[pose_estimator] Removing TB PC outliers' + \
                                       f' using agglomerative clustering...')
-                        points_array = remove_outliers_agglomerative(points_array, 
-                                                                     debug=debug)
+                        points_array = remove_outliers_agglomerative(points_array, debug=debug)
 
                         ## ----------------------------------------
                         ## Extracting Normal of Best-Fit Plane:
@@ -427,16 +426,13 @@ if __name__ == '__main__':
                         rect_corners = rect_rectified_corners.copy()
 
                         if debug:
-                            print('\n[DEBUG] Rectangle Corners:')
-                            print(rect_corners)
-                            # print('[DEBUG] Quadrant Corner ID Candidates:')
-                            # print(quadrant_corner_id_candidates)
+                            print(f'\n[DEBUG] Rectangle Corners:\n{rect_corners}')
+                            # print(f'[DEBUG] Quadrant Corner ID Candidates:\n{quadrant_corner_id_candidates}')
 
-                            print('\n[DEBUG] Quadrant corner IDs:', quadrant_corner_ids)
-                            print('[DEBUG] Corner quadrant IDs:', corner_quadrant_ids)
+                            print(f'\n[DEBUG] Quadrant corner IDs:\n{quadrant_corner_ids}')
+                            print(f'[DEBUG] Corner quadrant IDs:\n{corner_quadrant_ids}')
 
-                            print('\n[DEBUG] Estimated best-fit plane normal vector:')
-                            print(plane_normal_eigh)
+                            print(f'\n[DEBUG] Estimated best-fit plane normal vector:\n{plane_normal_eigh}')
 
                         # Estimate first orientation vector:
                         if quadrant_corner_ids['1'] is not None and quadrant_corner_ids['2'] is not None:
@@ -461,10 +457,8 @@ if __name__ == '__main__':
                             orientation_vector_1 = rect_corners[1, :] - rect_corners[0, :]
 
                         if debug:
-                            print('\n[DEBUG] Orientation vector 1 (unnormalized):')
-                            print(orientation_vector_1)
-                            print('[DEBUG] Orientation vector 2 (unnormalized):')
-                            print(orientation_vector_2)
+                            print(f'\n[DEBUG] Orientation vector 1 (unnormalized):\n{orientation_vector_1}')
+                            print(f'[DEBUG] Orientation vector 2 (unnormalized):\n{orientation_vector_2}')
 
                         orientation_vectors = np.stack((orientation_vector_1 / np.linalg.norm(orientation_vector_1),
                                                         orientation_vector_2 / np.linalg.norm(orientation_vector_2)))
@@ -529,23 +523,15 @@ if __name__ == '__main__':
                                    unfiltered_points_array[:, 2],
                                    label='Original', c='tab:blue', s=0.01, alpha=1.0)
                         ax.legend()
-                        ax.set_xlabel('$x$')
-                        ax.set_ylabel('$y$')
-                        ax.set_zlabel('$z$')
-
-                        orig_xlims = ax.get_xlim()
-                        orig_ylims = ax.get_ylim()
-                        orig_zlims = ax.get_zlim()
-
-                        # _ = ax.view_init(-140, -120)
-                        _ = ax.view_init(-92, -86)
+                        ax.set_xlabel('$x$'); ax.set_ylabel('$y$'); ax.set_zlabel('$z$')
+                        xlims, ylims, zlims  = ax.get_xlim(), ax.get_ylim(), ax.get_zlim()
+                        ax.view_init(-92, -86)
 
                         fig = plt.figure('Taskboard Orientation Estimation Results')
                         ax = fig.add_subplot(projection='3d')
 
                         if not hide_pc_points:
-                            ax.scatter(points_array[:, 0], points_array[:, 1],
-                                       points_array[:, 2],
+                            ax.scatter(points_array[:, 0], points_array[:, 1], points_array[:, 2],
                                        label='Points', c='black', s=0.01, alpha=0.2)
 
                         # Best-fit plane's normal vector:
@@ -657,17 +643,12 @@ if __name__ == '__main__':
                                        c=[np.array(class_colors_dict[object_id]) / 255.],
                                        label='Object: {}'.format(object_id))
 
-                        _ = ax.set_xlabel('$x$')
-                        _ = ax.set_ylabel('$y$')
-                        _ = ax.set_zlabel('$z$')
-
-                        _ = ax.set_xlim(np.array(orig_xlims) * 1.0)
-                        _ = ax.set_ylim(np.array(orig_ylims) * 1.0)
-                        _ = ax.set_zlim(np.array(orig_zlims) * 1.0)
-
-                        _ = plt.legend(prop={'size': 7}, bbox_to_anchor=(1.03, 1.0))
-                        # _ = ax.view_init(-140, -120)
-                        _ = ax.view_init(-92, -86)
+                        ax.legend(prop={'size': 7}, bbox_to_anchor=(1.03, 1.0))
+                        ax.set_xlabel('$x$'), ax.set_ylabel('$y$'), ax.set_zlabel('$z$')
+                        ax.set_xlim(np.array(xlims) * 1.0)
+                        ax.set_ylim(np.array(ylims) * 1.0)
+                        ax.set_zlim(np.array(zlims) * 1.0)
+                        ax.view_init(-92, -86)
 
                         plt.show()
 
