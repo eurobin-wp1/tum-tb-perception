@@ -413,7 +413,9 @@ class PositionEstimator(object):
     def estimate_object_positions(self, bbox_dict_list, pc_point_list, 
                                   cropped_pc_label=None, debug=False):
         """
-        TODO
+        Returns estimates of the 3D positions of detected objects from:
+            - CNN image object detections
+            - a list of points from a point cloud
 
         Parameters
         ----------
@@ -427,11 +429,18 @@ class PositionEstimator(object):
         cropped_pc_label: str
             Label of object for which to return the cropped point cloud (if debug)
         debug: bool
-            Whether to print some debugging messages
+            Whether to print some debugging messages and return cropped point cloud
 
         Returns
         -------
-        TODO
+        object_positions_dict: dict
+            Mapping between labels and estimated 3D positions (np.ndarrays)
+        object_points_dict: dict
+            Mapping between labels and lists of corresponding points (contained
+            in objects whose types will depend on the input pc_points, e.g.: 
+            sensor_msgs.point_cloud2.Point, list, np.ndarray).
+        cropped_pc_points_array: ndarray
+            Cropped point cloud set of 3D points (if debug)
         """
         object_points_dict = \
             self.get_point_cloud_segments(
@@ -466,13 +475,12 @@ class PositionEstimator(object):
         for label, points_array in object_points_dict.items():
             object_positions_dict[label] = points_array.mean(axis=0)
             if debug:
-                print('[DEBUG] Label: {}'.format(label))
-                print('[DEBUG] Points mean:', points_array.mean(axis=0))
-                print('[DEBUG] Points std:', points_array.std(axis=0))
+                print(f'[DEBUG] Label: {label}')
+                print(f'[DEBUG] Points mean: {points_array.mean(axis=0)}')
+                print(f'[DEBUG] Points std: {points_array.std(axis=0)}')
                 print()
 
-        return (object_positions_dict, object_points_dict,
-                cropped_pc_points_array) 
+        return (object_positions_dict, object_points_dict, cropped_pc_points_array) 
 
     def load_camera_params(self, camera_params_dict):
         """
