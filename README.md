@@ -145,12 +145,12 @@ For ROS:
 
 ## Future Plans
 
-* Separate core code and ROS interfaces.
-* Implement estimation of slider task solution.
-* Include complete code and instructions for training the detection model.
-* Implementing continuous detection + pose estimation (detection may require GPU).
-* Implementing pose estimation in C++ (if pointcloud processing run-time improves).
-* Create a ROS2 interface.
+- [X] Separate core code and ROS interfaces.
+- [X] Implement estimation of slider task solution.
+- [ ] Include complete code and instructions for training the detection model.
+- [ ] Implement continuous detection + pose estimation (detection may require GPU).
+- [ ] Implement pose estimation in C++ (if pointcloud processing run-time improves).
+- [ ] Create a ROS2 interface.
 
 <!-- TODO: Add references, etc., if any
 ## Credits
