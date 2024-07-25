@@ -30,7 +30,7 @@ from sensor_msgs.msg import PointCloud, PointCloud2, CameraInfo
 from visualization_msgs.msg import Marker, MarkerArray
 from eurobin_perception.msg import BoundingBoxList, ObjectList, Object
 
-from eurobin_perception.pose_estimation import PositionEstimator
+from eurobin_perception.pose_estimation import PoseEstimator
 from eurobin_perception.utils import bbox_list_msg_to_list, obj_list_msg_to_json
 from eurobin_perception.visualization import load_class_color_map
 
@@ -225,8 +225,8 @@ if __name__ == '__main__':
     orientation_quaternion = None
     object_marker_id_ = 0
 
-    # Initialize PositionEstimator (with current camera parameters):
-    position_estimator = PositionEstimator(camera_params_dict=get_camera_params_dict(), class_colors_dict=class_colors_dict)
+    # Initialize PoseEstimator (with current camera parameters):
+    position_estimator = PoseEstimator(camera_params_dict=get_camera_params_dict(), class_colors_dict=class_colors_dict)
 
     rospy.loginfo('[pose_estimator] Will estimate object poses for every message received on topic: {}'.format(detector_result_topic))
     try:

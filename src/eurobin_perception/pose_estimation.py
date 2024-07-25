@@ -20,11 +20,7 @@ setattr(Axes3D, 'arrow3D', _arrow3D)
 setattr(Axes3D, 'annotate3D', _annotate3D)
 
 
-## ----------------------------------------------------------------------
-## Functions:
-## ----------------------------------------------------------------------
-
-class PositionEstimator(object):
+class PoseEstimator(object):
     """
     Object position estimator that utilizes CNN RGB detection results and
     depth data: point clouds.
