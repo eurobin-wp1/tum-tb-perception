@@ -20,23 +20,25 @@ setattr(Axes3D, 'arrow3D', _arrow3D)
 setattr(Axes3D, 'annotate3D', _annotate3D)
 
 
-class PoseEstimator(object):
+class PositionEstimator(object):
     """
     Object position estimator that utilizes CNN RGB detection results and
     depth data: point clouds.
 
-    Note: this class was designed and is currently used for the taskboard
-    challenge and dataset, but could be made more general in the future.
+    Note: at the moment, the class implements position estimation that should
+    be general enough to work with any CNN detection results.
+    A general orientation estimator is not included since it is usually
+    problem-dependent. Instead, this class can be extended and custom orientation
+    functions implemented
 
     Parameters
     ----------
-        camera_params_dict: dict
-            Camera parameter values: f_x, f_y, c_x, c_y
+    camera_params_dict: dict
+        Camera parameter values: f_x, f_y, c_x, c_y
     """
 
-    def __init__(self, camera_params_dict, class_colors_dict):
+    def __init__(self, camera_params_dict):
         self.camera_params_dict = camera_params_dict
-        self.class_colors_dict = class_colors_dict
 
         self.name = self.__class__.__name__
 
@@ -259,6 +261,42 @@ class PoseEstimator(object):
 
         return points_array
 
+    def load_camera_params(self, camera_params_dict):
+        """
+        Stores the given camera parameter values.
+
+        Parameters
+        ----------
+        camera_params_dict: dict
+            Camera parameter values: f_x, f_y, c_x, c_y
+
+        Returns
+        -------
+        None
+        """
+        self.camera_params_dict = camera_params_dict
+
+class TaskboardPoseEstimator(PositionEstimator):
+    """
+    Taskboard pose estimator that utilizes CNN RGB detection results and
+    depth data: point clouds.
+
+    It inherits position estimation functionalities from the PositionEstimator
+    and implements a taskboard-specific orientation estimation algorithm.
+    Note: this class was designed for the taskboard challenge.
+
+    Parameters
+    ----------
+    camera_params_dict: dict
+        Camera parameter values: f_x, f_y, c_x, c_y
+    class_colors_dict: dict
+        Map between class names and (R, G, B) color tuples (0-255)
+    """
+    def __init__(self, camera_params_dict, class_colors_dict):
+        super().__init__(camera_params_dict)
+
+        self.class_colors_dict = class_colors_dict
+
     def remove_outliers_agglomerative(self, points_array, debug=False):
         """
         Removes outliers from the given array of 3D points using the agglomerative
@@ -303,21 +341,6 @@ class PoseEstimator(object):
             print(f'[DEBUG] [{self.name}] Number of remaining points: {points_array.shape[0]}')
 
         return points_array
-
-    def load_camera_params(self, camera_params_dict):
-        """
-        Stores the given camera parameter values.
-
-        Parameters
-        ----------
-        camera_params_dict: dict
-            Camera parameter values: f_x, f_y, c_x, c_y
-
-        Returns
-        -------
-        None
-        """
-        self.camera_params_dict = camera_params_dict
 
     def estimate_tb_orientation(self, tb_points_array, object_positions_dict, debug=False, **kwargs):
         """
@@ -659,3 +682,4 @@ class PoseEstimator(object):
             plt.show()
     
         return tb_tf_matrix, orientation_estimation_success, vertical_side_found, horizontal_side_found
+
