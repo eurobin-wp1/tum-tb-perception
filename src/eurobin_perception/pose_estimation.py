@@ -19,7 +19,7 @@ from eurobin_perception.utils import _arrow3D, _annotate3D, minimum_bounding_rec
 setattr(Axes3D, 'arrow3D', _arrow3D)
 setattr(Axes3D, 'annotate3D', _annotate3D)
 
-filename_ = os.path.basename(__file__).replace('.py', '')
+# filename_ = os.path.basename(__file__).replace('.py', '')
 
 ## ----------------------------------------------------------------------
 ## Functions:
@@ -59,12 +59,12 @@ def remove_outliers_agglomerative(points_array, debug=False):
     points_array = cluster_points[inlier_cluster_index]
 
     if debug:
-        print('\n[DEBUG] Original points array shape:', points_array.shape)
+        print(f'\n[DEBUG] Original points array shape: {points_array.shape}')
         for cluster_id in range(n_clusters):
             print(f'[DEBUG] No. of points in cluster {cluster_id}: {num_points_dict[cluster_id]}')
 
         print(f'[DEBUG] Selecting cluster {inlier_cluster_index} as inlier')
-        print(f'[DEBUG] Number of remaining points:', points_array.shape[0])
+        print(f'[DEBUG] Number of remaining points: {points_array.shape[0]}')
 
     return points_array
 
@@ -222,9 +222,9 @@ class PositionEstimator(object):
         for label, points_array in object_points_dict.items():
             object_positions_dict[label] = points_array.mean(axis=0)
             if debug:
-                print(f'[DEBUG] Label: {label}')
-                print(f'[DEBUG] Points mean: {points_array.mean(axis=0)}')
-                print(f'[DEBUG] Points std: {points_array.std(axis=0)}')
+                print(f'[DEBUG] [{self.name}] Label: {label}')
+                print(f'[DEBUG] [{self.name}] Points mean: {points_array.mean(axis=0)}')
+                print(f'[DEBUG] [{self.name}] Points std: {points_array.std(axis=0)}')
                 print()
 
         # Retain copy for orientation estimation visualizations:
@@ -254,8 +254,8 @@ class PositionEstimator(object):
             try:
                 point_arrays_dict[label] = np.stack(point_lists_dict[label])
             except ValueError:
-                print(f'[pose_estimator] [WARN] No points to extract for label {label}!')
-                print(f'[pose_estimator] [WARN] Skipping label {label}...')
+                print(f'[WARN] [{self.name}] No points to extract for label {label}!')
+                print(f'[WARN] [{self.name}] Skipping label {label}...')
                 continue
 
         return point_arrays_dict 
@@ -285,8 +285,8 @@ class PositionEstimator(object):
         points_df = pd.DataFrame(data=points_array, columns=['x', 'y', 'z'])
 
         if debug:
-            print('\n[DEBUG] Original points array shape:', points_array.shape)
-            print(f'[DEBUG] percentiles: {percentiles}')
+            print(f'\n[DEBUG] [{self.name}] Original points array shape: {points_array.shape}')
+            print(f'[DEBUG] [{self.name}] percentiles: {percentiles}')
         for dim in ['x', 'y', 'z']:
             lower_percentile = np.percentile(points_df[dim],
                                              percentiles[0],
@@ -301,8 +301,8 @@ class PositionEstimator(object):
             points_df = points_df.loc[(points_df[dim] >= lower_bound) & \
                                       (points_df[dim] <= upper_bound)]
             if debug:
-                print('[DEBUG] Removing outliers in {}:'.format(dim))
-                print('[DEBUG] Number of remaining points:', len(points_df))
+                print(f'[DEBUG] [{self.name}] Removing outliers in {dim}:')
+                print(f'[DEBUG] [{self.name}] Number of remaining points: {len(points_df)}')
 
         points_array = np.array(points_df)
 
@@ -373,12 +373,12 @@ class PositionEstimator(object):
         # Get 3D point cloud segment corresponding to the taskboard:
         tb_position = object_positions_dict['taskboard']
 
-        print(f'[{filename_}] [INFO] Removing TB PC outliers using agglomerative clustering...', flush=True)
+        print(f'[INFO] [{self.name}] Removing TB PC outliers using agglomerative clustering...', flush=True)
         tb_pc_outlier_removal_start_time = time.time()
         tb_points_array = remove_outliers_agglomerative(tb_points_array, debug=debug)
         if debug:
             elapsed_time = time.time() - tb_pc_outlier_removal_start_time
-            print(f'[{filename_}] [DEBUG] Removed TB PC outliers in {elapsed_time:.2f}s')
+            print(f'[DEBUG] [{self.name}] Removed TB PC outliers in {elapsed_time:.2f}s')
 
         ## ----------------------------------------
         ## Extracting Normal of Best-Fit Plane:
@@ -425,7 +425,7 @@ class PositionEstimator(object):
         elif 'multimeter_connector' in object_nearest_corner_dict.keys():
             quadrant_corner_ids['1'] = object_nearest_corner_dict['multimeter_connector']
         else:
-            print(f'[{filename_}] [INFO] Could not locate quadrant 1!', flush=True)
+            print(f'[INFO] [{self.name}] Could not locate quadrant 1!', flush=True)
             quadrant_corner_ids['1'] = None
 
         if 'hatch_handle' in object_nearest_corner_dict.keys():
@@ -433,7 +433,7 @@ class PositionEstimator(object):
         elif 'multimeter_probe' in object_nearest_corner_dict.keys():
             quadrant_corner_ids['2'] = object_nearest_corner_dict['multimeter_probe']
         else:
-            print(f'[{filename_}] [INFO] Could not locate quadrant 2!', flush=True)
+            print(f'[INFO] [{self.name}] Could not locate quadrant 2!', flush=True)
             quadrant_corner_ids['2'] = None
 
         if 'lcd' in object_nearest_corner_dict.keys():
@@ -441,13 +441,13 @@ class PositionEstimator(object):
         elif 'slider' in object_nearest_corner_dict.keys():
             quadrant_corner_ids['4'] = object_nearest_corner_dict['slider']
         else:
-            print(f'[{filename_}] [INFO] Could not locate quadrant 3!', flush=True)
+            print(f'[INFO] [{self.name}] Could not locate quadrant 3!', flush=True)
             quadrant_corner_ids['4'] = None
 
         if quadrant_corner_ids['4'] == None or \
                 quadrant_corner_ids['4'] == quadrant_corner_ids['1'] or \
                 quadrant_corner_ids['4'] == quadrant_corner_ids['2']:
-            print(f'[{filename_}] [WARN] Using test heuristic to determine quadrant 4...', flush=True)
+            print(f'[WARN] [{self.name}] Using test heuristic to determine quadrant 4...', flush=True)
             q1_coordinates = rect_rectified_corners[quadrant_corner_ids['1']]
             q2_coordinates = rect_rectified_corners[quadrant_corner_ids['2']]
             corner_distances = np.linalg.norm(rect_rectified_corners - q1_coordinates, axis=1)
@@ -462,13 +462,13 @@ class PositionEstimator(object):
         rect_corners = rect_rectified_corners.copy()
 
         if debug:
-            print(f'\n[DEBUG] Rectangle Corners:\n{rect_corners}')
-            # print(f'[DEBUG] Quadrant Corner ID Candidates:\n{quadrant_corner_id_candidates}')
+            print(f'\n[DEBUG] [{self.name}] Rectangle Corners:\n{rect_corners}')
+            # print(f'[DEBUG] [{self.name}] Quadrant Corner ID Candidates:\n{quadrant_corner_id_candidates}')
 
-            print(f'\n[DEBUG] Quadrant corner IDs:\n{quadrant_corner_ids}')
-            print(f'[DEBUG] Corner quadrant IDs:\n{corner_quadrant_ids}')
+            print(f'\n[DEBUG] [{self.name}] Quadrant corner IDs:\n{quadrant_corner_ids}')
+            print(f'[DEBUG] [{self.name}] Corner quadrant IDs:\n{corner_quadrant_ids}')
 
-            print(f'\n[DEBUG] Estimated best-fit plane normal vector:\n{plane_normal_eigenvector}')
+            print(f'\n[DEBUG] [{self.name}] Estimated best-fit plane normal vector:\n{plane_normal_eigenvector}')
 
         # Estimate first orientation vector:
         if quadrant_corner_ids['1'] is not None and quadrant_corner_ids['2'] is not None:
@@ -478,7 +478,7 @@ class PositionEstimator(object):
             orientation_vector_2 = rect_corners[quadrant_corner_ids['3'], :] - rect_corners[quadrant_corner_ids['4'], :]
             horizontal_side_found = True
         else:
-            print(f'[{filename_}] [WARN] Can not determine top/bottom of board!', flush=True)
+            print(f'[WARN] [{self.name}] Can not determine top/bottom of board!', flush=True)
             orientation_vector_2 = rect_corners[2, :] - rect_corners[1, :]
 
         # Estimate first orientation vector:
@@ -489,12 +489,12 @@ class PositionEstimator(object):
             orientation_vector_1 = rect_corners[quadrant_corner_ids['2'], :] - rect_corners[quadrant_corner_ids['3'], :]
             vertical_side_found = True
         else:
-            print(f'[{filename_}] [WARN] Can not determine right/left side of board!', flush=True)
+            print(f'[WARN] [{self.name}] Can not determine right/left side of board!', flush=True)
             orientation_vector_1 = rect_corners[1, :] - rect_corners[0, :]
 
         if debug:
-            print(f'\n[DEBUG] Orientation vector 1 (unnormalized):\n{orientation_vector_1}')
-            print(f'[DEBUG] Orientation vector 2 (unnormalized):\n{orientation_vector_2}')
+            print(f'\n[DEBUG] [{self.name}] Orientation vector 1 (unnormalized):\n{orientation_vector_1}')
+            print(f'[DEBUG] [{self.name}] Orientation vector 2 (unnormalized):\n{orientation_vector_2}')
 
         orientation_vectors = np.stack((orientation_vector_1 / np.linalg.norm(orientation_vector_1),
                                         orientation_vector_2 / np.linalg.norm(orientation_vector_2)))
@@ -503,8 +503,8 @@ class PositionEstimator(object):
 
         # Verify that the estimated orientation vectors are both perpendicular to the plane normal vector:
         if not all((orientation_vectors[:, :] @ plane_normal_eigenvector) < 1e-10):
-            print(f'[{filename_}] [INFO] Estimated orientation vectors are not orthogonal! Orientation matrix:\n {tb_orientation_matrix}', flush=True)
-            print(f'[{filename_}] [INFO] Will re-attempt to estimate orientation...', flush=True)
+            print(f'[INFO] [{self.name}] Estimated orientation vectors are not orthogonal! Orientation matrix:\n {tb_orientation_matrix}', flush=True)
+            print(f'[INFO] [{self.name}] Will re-attempt to estimate orientation...', flush=True)
 
             return None, False, vertical_side_found, horizontal_side_found
 
@@ -516,11 +516,11 @@ class PositionEstimator(object):
         # tb_tf_matrix = np.hstack((np.vstack((tb_orientation_matrix, np.zeros(3))), np.array([[tb_position[0], tb_position[1], tb_position[2], 1]]).T))
 
         if debug:
-            print(f'\n[DEBUG] Orientation vector 1 (normalized):\n{orientation_vectors[0, :]}')
-            print(f'[DEBUG] Orientation vector 2 (normalized):\n{orientation_vectors[1, :]}')
+            print(f'\n[DEBUG] [{self.name}] Orientation vector 1 (normalized):\n{orientation_vectors[0, :]}')
+            print(f'[DEBUG] [{self.name}] Orientation vector 2 (normalized):\n{orientation_vectors[1, :]}')
 
-            print(f'\n[DEBUG] Taskboard orientation matrix:\n{tb_orientation_matrix}')
-            print(f'[DEBUG] Taskboard surface tb_position position:\n{tb_position}')
+            print(f'\n[DEBUG] [{self.name}] Taskboard orientation matrix:\n{tb_orientation_matrix}')
+            print(f'[DEBUG] [{self.name}] Taskboard surface tb_position position:\n{tb_position}')
 
         orientation_estimation_success = True if vertical_side_found and horizontal_side_found else False
 
