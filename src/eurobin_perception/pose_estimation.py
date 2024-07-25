@@ -19,55 +19,10 @@ from eurobin_perception.utils import _arrow3D, _annotate3D, minimum_bounding_rec
 setattr(Axes3D, 'arrow3D', _arrow3D)
 setattr(Axes3D, 'annotate3D', _annotate3D)
 
-# filename_ = os.path.basename(__file__).replace('.py', '')
 
 ## ----------------------------------------------------------------------
 ## Functions:
 ## ----------------------------------------------------------------------
-
-def remove_outliers_agglomerative(points_array, debug=False):
-    """
-    TODO
-
-    Parameters
-    ----------
-    points_array: ndarray
-        3D position coordinates of a set of points
-    debug: bool
-        Whether to print debugging messages
-
-    Returns
-    -------
-    points_array: ndarray
-        3D position coordinates of a set of points post outlier removal
-    """
-    n_clusters = 2
-    model = AgglomerativeClustering(n_clusters=n_clusters,
-                                    linkage='single',
-                                    metric='cityblock')
-    point_indices = model.fit_predict(points_array)
-    cluster_points = dict(zip(np.arange(n_clusters),
-                              [points_array[point_indices == cluster_id] \
-                               for cluster_id in range(n_clusters)]))
-    num_points_dict = dict(zip(list(cluster_points.keys()),
-                               [cluster_points[cluster_id].shape[0] \
-                                for cluster_id in range(n_clusters)]))
-
-    # Select cluster with larger number of points as inlier:
-    inlier_cluster_index = np.argmax(list(num_points_dict.values()))
-
-    points_array = cluster_points[inlier_cluster_index]
-
-    if debug:
-        print(f'\n[DEBUG] Original points array shape: {points_array.shape}')
-        for cluster_id in range(n_clusters):
-            print(f'[DEBUG] No. of points in cluster {cluster_id}: {num_points_dict[cluster_id]}')
-
-        print(f'[DEBUG] Selecting cluster {inlier_cluster_index} as inlier')
-        print(f'[DEBUG] Number of remaining points: {points_array.shape[0]}')
-
-    return points_array
-
 
 class PositionEstimator(object):
     """
@@ -308,6 +263,51 @@ class PositionEstimator(object):
 
         return points_array
 
+    def remove_outliers_agglomerative(self, points_array, debug=False):
+        """
+        Removes outliers from the given array of 3D points using the agglomerative
+        clustering method.
+        This has been found to significantly improve taskboard orientation estimation.
+
+        Parameters
+        ----------
+        points_array: ndarray
+            3D position coordinates of a set of points
+        debug: bool
+            Whether to print debugging messages
+
+        Returns
+        -------
+        points_array: ndarray
+            3D position coordinates of a set of points post outlier removal
+        """
+        n_clusters = 2
+        model = AgglomerativeClustering(n_clusters=n_clusters,
+                                        linkage='single',
+                                        metric='cityblock')
+        point_indices = model.fit_predict(points_array)
+        cluster_points = dict(zip(np.arange(n_clusters),
+                                  [points_array[point_indices == cluster_id] \
+                                   for cluster_id in range(n_clusters)]))
+        num_points_dict = dict(zip(list(cluster_points.keys()),
+                                   [cluster_points[cluster_id].shape[0] \
+                                    for cluster_id in range(n_clusters)]))
+
+        # Select cluster with larger number of points as inlier:
+        inlier_cluster_index = np.argmax(list(num_points_dict.values()))
+
+        points_array = cluster_points[inlier_cluster_index]
+
+        if debug:
+            print(f'\n[DEBUG] [{self.name}] Original points array shape: {points_array.shape}')
+            for cluster_id in range(n_clusters):
+                print(f'[DEBUG] [{self.name}] No. of points in cluster {cluster_id}: {num_points_dict[cluster_id]}')
+
+            print(f'[DEBUG] [{self.name}] Selecting cluster {inlier_cluster_index} as inlier')
+            print(f'[DEBUG] [{self.name}] Number of remaining points: {points_array.shape[0]}')
+
+        return points_array
+
     def load_camera_params(self, camera_params_dict):
         """
         Stores the given camera parameter values.
@@ -375,7 +375,7 @@ class PositionEstimator(object):
 
         print(f'[INFO] [{self.name}] Removing TB PC outliers using agglomerative clustering...', flush=True)
         tb_pc_outlier_removal_start_time = time.time()
-        tb_points_array = remove_outliers_agglomerative(tb_points_array, debug=debug)
+        tb_points_array = self.remove_outliers_agglomerative(tb_points_array, debug=debug)
         if debug:
             elapsed_time = time.time() - tb_pc_outlier_removal_start_time
             print(f'[DEBUG] [{self.name}] Removed TB PC outliers in {elapsed_time:.2f}s')
