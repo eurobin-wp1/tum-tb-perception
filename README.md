@@ -73,12 +73,17 @@ Start the pose estimator node by running:
 roslaunch eurobin_perception pose_estimator.launch
 ```
 
-Execute the single object detector node by running:
+Execute the continuous object detector node by running:
 ```bash
-roslaunch eurobin_perception object_detector_single.launch
+roslaunch eurobin_perception object_detector.launch
 ```
 
 Note: the recommended way to run the components is through the launch files, because they ensure the correct configuration of various parameters (config file paths, etc.).
+
+Trigger the object detection and subsequent pose estimation by publishing:
+```bash
+rostopic pub -1 /eurobin_perception/detector_trigger std_msgs/Bool "data: true"
+```
 
 ## Directory Structure
 
@@ -145,12 +150,12 @@ For ROS:
 
 ## Future Plans
 
-* Separate core code and ROS interfaces.
-* Implement estimation of slider task solution.
-* Include complete code and instructions for training the detection model.
-* Implementing continuous detection + pose estimation (detection may require GPU).
-* Implementing pose estimation in C++ (if pointcloud processing run-time improves).
-* Create a ROS2 interface.
+- [X] Separate core code and ROS interfaces.
+- [X] Implement estimation of slider task solution.
+- [ ] Include complete code and instructions for training the detection model.
+- [ ] Implement continuous detection + pose estimation (detection may require GPU).
+- [ ] Implement pose estimation in C++ (if pointcloud processing run-time improves).
+- [ ] Create a ROS2 interface.
 
 <!-- TODO: Add references, etc., if any
 ## Credits

@@ -7,8 +7,8 @@
     <!-- <arg name="output_dir_path" default="$(find eurobin_perception)/output_data"/> -->
     <arg name="output_dir_path" default="/tmp"/>
     <arg name="confidence_threshold" default="0.7"/>
-    <arg name="run_on_ros_trigger" default="false"/>
-    <arg name="run_on_udp_trigger" default="true"/>
+    <arg name="run_on_ros_trigger" default="true"/>
+    <arg name="run_on_udp_trigger" default="false"/>
     <arg name="udp_ip" default="localhost"/>
     <arg name="udp_trigger_port" default="5000"/>
     <arg name="image_topic" default="/camera/color/image_raw"/>
