@@ -226,7 +226,8 @@ if __name__ == '__main__':
     object_marker_id_ = 0
 
     # Initialize TaskboardPoseEstimator (with current camera parameters):
-    position_estimator = TaskboardPoseEstimator(camera_params_dict=get_camera_params_dict(), class_colors_dict=class_colors_dict)
+    position_estimator = TaskboardPoseEstimator(class_colors_dict=class_colors_dict)
+    position_estimator.load_camera_params(get_camera_params_dict())
 
     rospy.loginfo('[pose_estimator] Will estimate object poses for every message received on topic: {}'.format(detector_result_topic))
     try:

@@ -33,17 +33,12 @@ class PositionEstimator(object):
 
     Parameters
     ----------
-    camera_params_dict: dict
-        Camera parameter values: f_x, f_y, c_x, c_y
+    None
     """
-
-    def __init__(self, camera_params_dict):
-        self.camera_params_dict = camera_params_dict
-
+    def __init__(self):
         self.name = self.__class__.__name__
 
     def get_point_cloud_segments(self, pc_points, bbox_dict_list, 
-                                 camera_params_dict, 
                                  cropped_pc_label='taskboard', debug=False):
         """
         Extracts the segments of a pointcloud's set of points that correspond 
@@ -69,8 +64,6 @@ class PositionEstimator(object):
         bbox_dict_list: 
             Dicts containing info on each detection bbox 
             (class, xmin, ymin, xmax, ymax, confidence)
-        camera_params_dict: dict
-            Camera parameter values: f_x, f_y, c_x, c_y
         cropped_pc_label: str
             Label of object for which to return the cropped point cloud (if debug)
         debug: bool
@@ -83,8 +76,8 @@ class PositionEstimator(object):
             in objects whose types will depend on the input pc_points, e.g.: 
             sensor_msgs.point_cloud2.Point, list, ndarray).
         """
-        f_x, f_y = camera_params_dict['f_x'], camera_params_dict['f_y']
-        c_x, c_y = camera_params_dict['c_x'], camera_params_dict['c_y']
+        f_x, f_y = self.camera_params_dict['f_x'], self.camera_params_dict['f_y']
+        c_x, c_y = self.camera_params_dict['c_x'], self.camera_params_dict['c_y']
 
         # Find and store the 3D points that fall within each detection BB using the 3D-to-2D back-projection method:
         object_points_dict = {}
@@ -146,7 +139,6 @@ class PositionEstimator(object):
             self.get_point_cloud_segments(
                 pc_points=pc_point_list,
                 bbox_dict_list=bbox_dict_list,
-                camera_params_dict=self.camera_params_dict,
                 cropped_pc_label=cropped_pc_label,
                 debug=debug
         )
@@ -287,13 +279,11 @@ class TaskboardPoseEstimator(PositionEstimator):
 
     Parameters
     ----------
-    camera_params_dict: dict
-        Camera parameter values: f_x, f_y, c_x, c_y
     class_colors_dict: dict
         Map between class names and (R, G, B) color tuples (0-255)
     """
-    def __init__(self, camera_params_dict, class_colors_dict):
-        super().__init__(camera_params_dict)
+    def __init__(self, class_colors_dict):
+        super().__init__()
 
         self.class_colors_dict = class_colors_dict
 
