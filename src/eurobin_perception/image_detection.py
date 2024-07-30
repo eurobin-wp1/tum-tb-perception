@@ -12,7 +12,7 @@ import torch
 from torchvision import tv_tensors
 
 from eurobin_perception.models import get_tb_cnn_model
-from eurobin_perception.dataset import TaskboardDataset, apply_transforms
+from eurobin_perception.dataset import apply_transforms, load_labels
 from eurobin_perception.utils import get_bbox_dicts, filter_preds
 from eurobin_perception.visualization import load_class_color_map, annotate_image
 
@@ -25,15 +25,15 @@ class ImageDetector(object):
     challenge and dataset, but could be made more general in the future.
     """
 
-    def __init__(self, dataset_dir_path, model_weights_file_path, 
+    def __init__(self, model_weights_file_path, labels_file_path,
                  class_colors_file_path, confidence_threshold,
                  device='cpu'):
         self.model_weights_file_path = model_weights_file_path
         self.confidence_threshold = confidence_threshold
         self.device = device
 
-        self.dataset = TaskboardDataset(root=dataset_dir_path)
-        self.labels_list = self.dataset.get_labels_list()
+        self.labels_list = load_labels(labels_file_path)
+        self.num_classes = len(self.labels_list)
         self.class_colors_dict = load_class_color_map(class_colors_file_path)
         self.tensor_transforms = apply_transforms()
 
@@ -54,7 +54,7 @@ class ImageDetector(object):
         """
         print(f'[INFO] [{self.name}] Loading pretrained Faster R-CNN model' + \
               f' from: {self.model_weights_file_path}')
-        self.model = get_tb_cnn_model(self.dataset.get_num_classes())
+        self.model = get_tb_cnn_model(self.num_classes)
         self.model.load_state_dict(torch.load(self.model_weights_file_path, 
                                               map_location=self.device))
         self.model.eval()

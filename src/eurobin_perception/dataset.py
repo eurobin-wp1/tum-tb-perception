@@ -61,6 +61,29 @@ def load_xml_labels(filepath):
 
     return image_id, bboxes
 
+        
+def load_labels(labels_file_path, remove_bg=False):
+    """
+    Loads and stores the list of labels.
+
+    Parameters
+    ----------
+    remove_bg: bool
+        Whether to exclude the "background" class from the list.
+
+    Returns
+    -------
+    labels_list: list
+        Strings representing each class.
+    """
+    with open(labels_file_path, 'r') as filehandle:
+        labels_list = filehandle.read().splitlines()
+
+    if remove_bg:
+        labels_list.remove('background')
+
+    return labels_list
+
 def get_bboxes_array(bboxes_list):
     """
     Aggregates bbox coordinates in a single numpy array.
@@ -179,11 +202,11 @@ class TaskboardDataset(torch.utils.data.Dataset):
                                 'high_light': 'light_on'}
         self.imgs = []
         self.labels = []
-        self.gt_labels_list = None
-        self.num_classes = None
 
         self.load_img_and_label_filenames()
         self.load_labels()
+        self.gt_labels_list = load_labels(os.path.join(self.root, 'labels.txt'))
+        self.num_classes = len(self.gt_labels_list)
 
         self.transforms = apply_transforms(training)
         
@@ -217,29 +240,7 @@ class TaskboardDataset(torch.utils.data.Dataset):
             
             self.imgs.extend(img_filenames)
             self.labels.extend(label_filenames)
-        
-    def load_labels(self, remove_bg=False):
-        """
-        Loads and stores the list of labels.
 
-        Parameters
-        ----------
-        remove_bg: bool
-            Whether to exclude the "background" class from the list.
-
-        Returns
-        -------
-        None
-        """
-        labels_file_path = os.path.join(self.root, 'labels.txt')
-        with open(labels_file_path, 'r') as filehandle:
-            self.gt_labels_list = filehandle.read().splitlines()
-
-        if remove_bg:
-            self.gt_labels_list.remove('background')
-
-        self.num_classes = len(self.gt_labels_list)
-        
     def get_labels_list(self):
         """
         Returns the labels list.
