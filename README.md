@@ -33,20 +33,24 @@ Both functionalities can be triggered through ROS or UDP messages.
 
 The diagram below visualizes the three nodes within this package and their input and output ROS topics and messages.
 
-![component_diagram](https://github.com/user-attachments/assets/c728dc74-35c7-4c96-b2df-45b6d6cc6854)
+<!-- ![component_diagram](https://github.com/user-attachments/assets/c728dc74-35c7-4c96-b2df-45b6d6cc6854) -->
+![component_diagram](docs/images/component_diagram.png)
 
 ## Example Results
 
 Taskboard CNN detection and pose estimation results from the <b>CNN detector</b> and <b>pose estimator</b> nodes shown on RViz:
+<p float="left" align="center">
+  <img src="docs/images/perception_cnn_object_detection_and_3d_pose_estimation_rviz_screenshot.png" width="90%" /> 
+</p>
 
-<!---
-TODO: Add detection + pose estimation image
--->
+&nbsp;
 
 LCD marker identification and slider motion distance estimation from the <b>slider task solver</b> node:
-<!---
-TODO: Add slider task solution image
--->
+
+<p float="left" align="center">
+  <img src="docs/images/perception_slider_task_solution_estimation_rviz_demo_screenshot_1.png" width="45%" />
+  <img src="docs/images/perception_slider_task_solution_estimation_rviz_demo_screenshot_2.png" width="45%" /> 
+</p>
 
 ## Main Components
 
