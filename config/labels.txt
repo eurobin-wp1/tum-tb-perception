@@ -1,0 +1,12 @@
+background
+taskboard
+red_button
+blue_button
+lcd
+slider
+hatch_handle
+multimeter_connector
+multimeter_probe
+multimeter_socket
+wire_connector
+cable_holder
