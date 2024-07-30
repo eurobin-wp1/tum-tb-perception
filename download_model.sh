@@ -3,7 +3,7 @@ set -e
 
 ## ==============================================================================================================
 ## Description   : Downloads the trained taskboard NN detection model.
-##                 NOTE: Only invoke from within the eurobin-perception directory!
+##                 NOTE: Only invoke from within the tum-tb-perception directory!
 ## ==============================================================================================================
 
 models_dir_path="./models"

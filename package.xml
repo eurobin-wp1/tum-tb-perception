@@ -1,12 +1,12 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>eurobin_perception</name>
+  <name>tum_tb_perception</name>
   <version>0.1.0</version>
-  <description>Perception libraries for the euRobin taskboard challenge</description>
+  <description>Perception libraries for the euROBIN task board challenge</description>
 
   <author email="ahmed.abdelrahman@tum.de">Ahmed Abdelrahman</author>
   <maintainer email="ahmed.abdelrahman@tum.de">Ahmed Abdelrahman</maintainer>
-  <url>https://github.com/eurobin-wp1/eurobin-perception</url>
+  <url>https://github.com/eurobin-wp1/tum-tb-perception</url>
   <license>MIT</license>
 
   <buildtool_depend>catkin</buildtool_depend>

@@ -24,9 +24,9 @@ from cv_bridge import CvBridge, CvBridgeError
 
 from std_msgs.msg import Bool
 from sensor_msgs.msg import Image
-from eurobin_perception.msg import BoundingBox, BoundingBoxList
+from tum_tb_perception.msg import BoundingBox, BoundingBoxList
 
-from eurobin_perception.image_detection import ImageDetector
+from tum_tb_perception.image_detection import ImageDetector
 
 supported_torch_devices_ = ['cpu', 'gpu']
 ros_triggered_ = False
@@ -61,7 +61,7 @@ if __name__ == '__main__':
     rospy.init_node('cnn_detector')
     rate = rospy.Rate(10)
 
-    package_path = rospkg.RosPack().get_path('eurobin_perception')
+    package_path = rospkg.RosPack().get_path('tum_tb_perception')
 
     model_weights_file_path = rospy.get_param('~model_weights_file_path', '')
     class_colors_file_path = rospy.get_param('~class_colors_file_path','')
@@ -76,13 +76,13 @@ if __name__ == '__main__':
 
     image_topic = rospy.get_param('~image_topic', '/camera/color/image_raw')
     trigger_topic = rospy.get_param('~trigger_topic', 
-                                    '/eurobin_perception/detector_trigger')
+                                    '/tum_tb_perception/detector_trigger')
     image_pub_topic = rospy.get_param('~image_pub_topic', 
-                                      '/eurobin_perception/detection_images')
+                                      '/tum_tb_perception/detection_images')
     input_image_pub_topic = rospy.get_param('~input_image_pub_topic', 
-                                            '/eurobin_perception/input_images')
+                                            '/tum_tb_perception/input_images')
     detection_pub_topic = rospy.get_param('~detection_pub_topic', 
-                                          '/eurobin_perception/detection_result')
+                                          '/tum_tb_perception/detection_result')
 
     image_subscriber = rospy.Subscriber(image_topic, Image, image_callback)
     if run_on_ros_trigger:

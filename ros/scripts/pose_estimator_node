@@ -28,11 +28,11 @@ import sensor_msgs.point_cloud2 as pc2
 from geometry_msgs.msg import Point, Pose, Quaternion, Vector3, TransformStamped
 from sensor_msgs.msg import PointCloud, PointCloud2, CameraInfo
 from visualization_msgs.msg import Marker, MarkerArray
-from eurobin_perception.msg import BoundingBoxList, ObjectList, Object
+from tum_tb_perception.msg import BoundingBoxList, ObjectList, Object
 
-from eurobin_perception.pose_estimation import TaskboardPoseEstimator
-from eurobin_perception.utils import bbox_list_msg_to_list, obj_list_msg_to_json
-from eurobin_perception.visualization import load_class_color_map
+from tum_tb_perception.pose_estimation import TaskboardPoseEstimator
+from tum_tb_perception.utils import bbox_list_msg_to_list, obj_list_msg_to_json
+from tum_tb_perception.visualization import load_class_color_map
 
 
 ## ----------------------------------------------------------------------
@@ -166,7 +166,7 @@ if __name__ == '__main__':
     rospy.init_node('pose_estimator')
     rate = rospy.Rate(10)
 
-    package_path = rospkg.RosPack().get_path('eurobin_perception')
+    package_path = rospkg.RosPack().get_path('tum_tb_perception')
 
     class_colors_file_path = rospy.get_param('~class_colors_file_path', '')
     output_dir_path = rospy.get_param('~output_dir_path', 
@@ -178,11 +178,11 @@ if __name__ == '__main__':
 
     pointcloud_topic = rospy.get_param('~pointcloud_topic', '/camera/depth/color/points')
     camera_info_topic = rospy.get_param('~camera_info_topic', '/camera/color/camera_info')
-    detector_result_topic = rospy.get_param('~detector_result_topic', '/eurobin_perception/detection_result')
-    object_positions_pub_topic = rospy.get_param('~object_positions_pub_topic', '/eurobin_perception/object_positions')
-    object_poses_pub_topic = rospy.get_param('~object_poses_pub_topic', '/eurobin_perception/object_poses')
-    object_marker_pub_topic = rospy.get_param('~object_marker_pub_topic', '/eurobin_perception/object_markers')
-    cropped_pc_pub_topic = rospy.get_param('~cropped_pc_pub_topic', '/eurobin_perception/cropped_pc')
+    detector_result_topic = rospy.get_param('~detector_result_topic', '/tum_tb_perception/detection_result')
+    object_positions_pub_topic = rospy.get_param('~object_positions_pub_topic', '/tum_tb_perception/object_positions')
+    object_poses_pub_topic = rospy.get_param('~object_poses_pub_topic', '/tum_tb_perception/object_poses')
+    object_marker_pub_topic = rospy.get_param('~object_marker_pub_topic', '/tum_tb_perception/object_markers')
+    cropped_pc_pub_topic = rospy.get_param('~cropped_pc_pub_topic', '/tum_tb_perception/cropped_pc')
 
     debug = rospy.get_param('~debug', False)
     save_output = rospy.get_param('~save_output', False)

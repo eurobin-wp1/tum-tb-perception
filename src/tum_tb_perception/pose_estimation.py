@@ -15,7 +15,7 @@ from sklearn.cluster import AgglomerativeClustering
 # For debug visualizations:
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-from eurobin_perception.utils import _arrow3D, _annotate3D, minimum_bounding_rectangle, rotation_matrix_from_vectors
+from tum_tb_perception.utils import _arrow3D, _annotate3D, minimum_bounding_rectangle, rotation_matrix_from_vectors
 setattr(Axes3D, 'arrow3D', _arrow3D)
 setattr(Axes3D, 'annotate3D', _annotate3D)
 

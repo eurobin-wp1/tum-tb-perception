@@ -1,8 +1,8 @@
 <div align="center">
 
-# eurobin-perception
+# tum-tb-perception
 
-A ROS package that contains the core perception libraries and tools for the euRobin taskboard challenge.
+A ROS package that contains the core perception libraries and tools for the euROBIN task board challenge.
 
 Designed for and tested on Ubuntu 20.04 LTS, ROS Noetic with Python 3.8, and an Intel Realsense D435i.
 
@@ -28,11 +28,11 @@ Designed for and tested on Ubuntu 20.04 LTS, ROS Noetic with Python 3.8, and an 
 
 ## Overview
 
-To solve the euRobin challenge, <b>eurobin_perception</b> implements the following perception functionalities by utilizing RGB-D sensor data:
-* detecting and estimating the locations of a taskboard and its components to enable a robot to reach and manipulate each component,
+To solve the euRobin challenge, <b>tum_tb_perception</b> implements the following perception functionalities by utilizing RGB-D sensor data:
+* detecting and estimating the locations of a task board and its components to enable a robot to reach and manipulate each component,
 * estimating the positions of elements on the LCD screen to solve the slider task.
 
-The detection and localization of the taskboard components consists of two parts. A [Faster R-CNN](https://pytorch.org/vision/main/models/faster_rcnn.html) CNN model that has been trained on a dataset of RGB taskboard images is deployed on an <b>CNN detector</b> node. A <b>pose estimator</b> node then uses the detection result and depth point cloud data to estimate the 3D position of each detected taskboard component and the pose of the taskboard (position and orientation).
+The detection and localization of the task board components consists of two parts. A [Faster R-CNN](https://pytorch.org/vision/main/models/faster_rcnn.html) CNN model that has been trained on a dataset of RGB task board images is deployed on an <b>CNN detector</b> node. A <b>pose estimator</b> node then uses the detection result and depth point cloud data to estimate the 3D position of each detected task board component and the pose of the task board (position and orientation).
 
 The perception aspect of the slider task: estimating the distance between a start and and end marker on the LCD screen, is handled by a <b>slider task solver</b> node.
 
@@ -72,17 +72,17 @@ The `cnn_detector_node` loads a pre-trained detection model and runs continuousl
 The `pose_estimator_node` runs continuously; for each received detection result, it:
 * extracts segments of the point cloud that correspond to each object that was detected in the image; for this, each 3D point is back-projected onto the image plane to determine if it lies within a given bounding box.
 * estimates the 3D position of each detected object through a measure of the aggregate of its pointcloud segment (currently the mean).
-* estimates the 3D orientation of the taskboard from its point cloud segment.
-* publishes and optionally visualizes the object positions and a coordinate frame that describes the pose of the taskboard.
+* estimates the 3D orientation of the task board from its point cloud segment.
+* publishes and optionally visualizes the object positions and a coordinate frame that describes the pose of the task board.
 
-In order to estimate the taskboard orientation, we find a coordinate frame whose i) `z`-axis points perpendicular to the face and upwards, ii) `x`-axis points from the left to the right side of the board, and iii) `y`-axis points from the bottom to the top side of the board. This is achieved by:
+In order to estimate the task board orientation, we find a coordinate frame whose i) `z`-axis points perpendicular to the face and upwards, ii) `x`-axis points from the left to the right side of the board, and iii) `y`-axis points from the bottom to the top side of the board. This is achieved by:
 * filtering the point cloud segment to remove outliers
-* fitting a plane through the remaining points and computing its normal vector; this vector represents the `z`-axis of the taskboard
-* projecting all points onto the plane and fitting a minimum-bounding rectangle on the points; the sides of this rectangle are parallel to the `x` and `y` axes of the taskboard
+* fitting a plane through the remaining points and computing its normal vector; this vector represents the `z`-axis of the task board
+* projecting all points onto the plane and fitting a minimum-bounding rectangle on the points; the sides of this rectangle are parallel to the `x` and `y` axes of the task board
 * if possible, finding the specific directions of the `x` and `y` vectors using information about the 3D positions of objects:
-  * dividing the taskboard rectangle into four quadrants
+  * dividing the task board rectangle into four quadrants
   * recognizing quadrants 1-4 from the objects that lie within them (e.g. `slider` is expected to be inside quadrant 4)
-  * finding the correspondin corners of the taskboard
+  * finding the correspondin corners of the task board
   * setting the directions of `x` and `y` such that they point towards the two right-side corners and the top-side corners, respectively.
 
 ### Slider Task Solver
@@ -109,7 +109,7 @@ pip install -r requirements.txt
 
 Build the package using:
 ```
-catkin build eurobin_perception
+catkin build tum_tb_perception
 ```
 
 ### Download Detection Model
@@ -139,37 +139,37 @@ roslaunch realsense2_camera rs_camera.launch filters:=pointcloud
 
 Start the pose estimator node:
 ```bash
-roslaunch eurobin_perception pose_estimator.launch
+roslaunch tum_tb_perception pose_estimator.launch
 ```
 
 Start the object detector node:
 ```bash
-roslaunch eurobin_perception object_detector.launch
+roslaunch tum_tb_perception object_detector.launch
 ```
 
 Start the slider task solver node:
 ```bash
-roslaunch eurobin_perception slider_task_solver.launch
+roslaunch tum_tb_perception slider_task_solver.launch
 ```
 
 Note: the recommended way to run the components is through the launch files, because they ensure the correct configuration of various parameters (config file paths, etc.).
 
-To detect the taskboard and its components, position the camera above the approximate location of the taskboard looking down (see, for example, the perspective shown on the illustrative RViz image [above](#example-results)).
+To detect the task board and its components, position the camera above the approximate location of the task board looking down (see, for example, the perspective shown on the illustrative RViz image [above](#example-results)).
 Then, trigger the object detection and subsequent pose estimation by publishing:
 ```bash
-rostopic pub -1 /eurobin_perception/detector_trigger std_msgs/Bool "data: true"
+rostopic pub -1 /tum_tb_perception/detector_trigger std_msgs/Bool "data: true"
 ```
-The estimated taskboard and component poses will be published on the `/eurobin_perception/object_poses` topic.
+The estimated task board and component poses will be published on the `/tum_tb_perception/object_poses` topic.
 
 <!-- Add custom ROS message specifications -->
 
 To estimate the solution for the slider task, position the camera above the LCD screen (see, for example, the perspective shown on the illustrative image of the screen [above](#example-results)).
 Then, trigger the slider distance estimation by publishing:
 ```bash
-rostopic pub -1 /eurobin_perception/silder_solver_trigger std_msgs/Bool "data: true"
+rostopic pub -1 /tum_tb_perception/silder_solver_trigger std_msgs/Bool "data: true"
 ```
 
-The estimated slider motion distance will be published on the `/eurobin_perception/slider_solver_result` topic.
+The estimated slider motion distance will be published on the `/tum_tb_perception/slider_solver_result` topic.
 
 ### Alternative Triggering and Data Retrieval: UDP Messages
 
@@ -184,7 +184,7 @@ Both the detection + pose estimation and slider task solution nodes can be trigg
 }
 ```
 
-The estimated taskboard and component poses will be sent over the `udp_output_port` port with the format shown in the following example:
+The estimated task board and component poses will be sent over the `udp_output_port` port with the format shown in the following example:
 <details>
 <summary> Example TaskBoard Pose Estimation Result UDP Message </summary>
 
@@ -259,10 +259,10 @@ The estimated slider motion distance will be sent over the `udp_output_port` por
 <summary> Package Files </summary>
 
 ```
-eurobin-perception
+tum-tb-perception
 │
 ├── src
-│   └── eurobin_perception
+│   └── tum_tb_perception
 │       ├── __init__.py
 │       ├── image_detection.py
 │       ├── pose_estimation.py
@@ -329,7 +329,7 @@ For ROS:
 
 - [X] Separate core code and ROS interfaces.
 - [X] Implement estimation of slider task solution.
-- [ ] Include dependecy: `eurobin_msgs`.
+- [ ] Include dependecy: `tum_tb_perception_msgs`.
 - [ ] Include complete code and instructions for training the detection model.
 - [ ] Implement continuous detection + pose estimation (detection may require GPU).
 - [ ] Implement pose estimation in C++ (if pointcloud processing run-time improves).

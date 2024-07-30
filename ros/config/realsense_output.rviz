@@ -121,7 +121,7 @@ Visualization Manager:
       Value: false
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /eurobin_perception/object_markers
+      Marker Topic: /tum_tb_perception/object_markers
       Name: MarkerArray
       Namespaces:
         {}
@@ -150,7 +150,7 @@ Visualization Manager:
       Size (Pixels): 3
       Size (m): 0.0010000000474974513
       Style: Spheres
-      Topic: /eurobin_perception/cropped_pc
+      Topic: /tum_tb_perception/cropped_pc
       Unreliable: false
       Use Fixed Frame: true
       Use rainbow: true
@@ -213,7 +213,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Image
       Enabled: true
-      Image Topic: /eurobin_perception/detection_images
+      Image Topic: /tum_tb_perception/detection_images
       Max Value: 1
       Median window: 5
       Min Value: 0

@@ -1,2 +1,2 @@
 Header header
-eurobin_perception/BoundingBox[] bounding_boxes
+tum_tb_perception/BoundingBox[] bounding_boxes

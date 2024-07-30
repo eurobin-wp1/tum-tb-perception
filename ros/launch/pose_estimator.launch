@@ -1,23 +1,23 @@
 <?xml version="1.0"?>
 <launch>
 
-    <arg name="class_colors_file_path" default="$(find eurobin_perception)/config/class_colors_taskboard.yaml"/>
+    <arg name="class_colors_file_path" default="$(find tum_tb_perception)/config/class_colors_taskboard.yaml"/>
     <arg name="taskboard_frame_name" default="taskboard_frame"/>
     <arg name="num_retries" default="3"/>
-    <arg name="output_dir_path" default="$(find eurobin_perception)/output_data"/>
+    <arg name="output_dir_path" default="$(find tum_tb_perception)/output_data"/>
     <arg name="udp_ip" default="localhost"/>
     <arg name="udp_output_port" default="6000"/>
     <arg name="point_cloud_topic" default="/camerka/depth/color/points"/>
     <arg name="camera_info_topic" default="/camera/color/camera_info"/>
-    <arg name="detector_result_topic" default="/eurobin_perception/detection_result"/>
-    <arg name="object_positions_pub_topic" default="/eurobin_perception/object_positions"/>
-    <arg name="object_poses_pub_topic" default="/eurobin_perception/object_poses"/>
-    <arg name="object_marker_pub_topic" default="/eurobin_perception/object_markers"/>
-    <arg name="cropped_pc_pub_topic" default="/eurobin_perception/cropped_pc"/>
+    <arg name="detector_result_topic" default="/tum_tb_perception/detection_result"/>
+    <arg name="object_positions_pub_topic" default="/tum_tb_perception/object_positions"/>
+    <arg name="object_poses_pub_topic" default="/tum_tb_perception/object_poses"/>
+    <arg name="object_marker_pub_topic" default="/tum_tb_perception/object_markers"/>
+    <arg name="cropped_pc_pub_topic" default="/tum_tb_perception/cropped_pc"/>
     <arg name="save_output" default="false"/>
     <arg name="debug" default="false"/>
 
-    <node pkg="eurobin_perception" type="pose_estimator_node" name="pose_estimator"
+    <node pkg="tum_tb_perception" type="pose_estimator_node" name="pose_estimator"
         output="screen" respawn="false">
         <param name="class_colors_file_path" type="str" value="$(arg class_colors_file_path)"/>
         <param name="taskboard_frame_name" type="str" value="$(arg taskboard_frame_name)"/>

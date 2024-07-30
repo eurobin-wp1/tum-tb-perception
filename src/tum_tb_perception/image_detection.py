@@ -11,10 +11,10 @@ import torch
 
 from torchvision import tv_tensors
 
-from eurobin_perception.models import get_tb_cnn_model
-from eurobin_perception.dataset import apply_transforms, load_labels
-from eurobin_perception.utils import get_bbox_dicts, filter_preds
-from eurobin_perception.visualization import load_class_color_map, annotate_image
+from tum_tb_perception.models import get_tb_cnn_model
+from tum_tb_perception.dataset import apply_transforms, load_labels
+from tum_tb_perception.utils import get_bbox_dicts, filter_preds
+from tum_tb_perception.visualization import load_class_color_map, annotate_image
 
 
 class ImageDetector(object):

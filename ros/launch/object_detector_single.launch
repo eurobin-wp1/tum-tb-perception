@@ -1,21 +1,21 @@
 <?xml version="1.0"?>
 <launch>
 
-    <arg name="model_weights_file_path" default="$(find eurobin_perception)/models/tb_fasterrcnn_epochs_25_batches_1_tv_ratio_07_seed_2_20240121_154144.pt"/>
-    <arg name="class_colors_file_path" default="$(find eurobin_perception)/config/class_colors_taskboard.yaml"/>
-    <arg name="labels_file_path" default="$(find eurobin_perception)/config/labels.txt"/>
-    <arg name="output_dir_path" default="$(find eurobin_perception)/output_data"/>
+    <arg name="model_weights_file_path" default="$(find tum_tb_perception)/models/tb_fasterrcnn_epochs_25_batches_1_tv_ratio_07_seed_2_20240121_154144.pt"/>
+    <arg name="class_colors_file_path" default="$(find tum_tb_perception)/config/class_colors_taskboard.yaml"/>
+    <arg name="labels_file_path" default="$(find tum_tb_perception)/config/labels.txt"/>
+    <arg name="output_dir_path" default="$(find tum_tb_perception)/output_data"/>
     <arg name="confidence_threshold" default="0.7"/>
     <arg name="image_topic" default="/camera/color/image_raw"/>
-    <arg name="image_pub_topic" default="/eurobin_perception/detection_images"/>
-    <arg name="input_image_pub_topic" default="/eurobin_perception/input_images"/>
-    <arg name="detection_pub_topic" default="/eurobin_perception/detection_result"/>
+    <arg name="image_pub_topic" default="/tum_tb_perception/detection_images"/>
+    <arg name="input_image_pub_topic" default="/tum_tb_perception/input_images"/>
+    <arg name="detection_pub_topic" default="/tum_tb_perception/detection_result"/>
     <arg name="publish_visual_output" default="true"/>
     <arg name="display_output" default="false"/>
     <arg name="save_output" default="false"/>
     <arg name="device" default="cpu"/>
 
-    <node pkg="eurobin_perception" type="single_cnn_detector_node" name="cnn_detector"
+    <node pkg="tum_tb_perception" type="single_cnn_detector_node" name="cnn_detector"
         output="screen" respawn="false">
         <param name="model_weights_file_path" type="str" value="$(arg model_weights_file_path)"/>
         <param name="class_colors_file_path" type="str" value="$(arg class_colors_file_path)"/>

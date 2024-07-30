@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
 <launch>
 
-    <arg name="template_source_image_dir_path" default="$(find eurobin_perception)/models/slider_solver_templates_images"/>
-    <arg name="output_dir_path" default="$(find eurobin_perception)/output_data"/>
+    <arg name="template_source_image_dir_path" default="$(find tum_tb_perception)/models/slider_solver_templates_images"/>
+    <arg name="output_dir_path" default="$(find tum_tb_perception)/output_data"/>
     <arg name="image_topic" default="/camera/color/image_raw"/>
-    <!-- <arg name="image_topic" default="/eurobin_perception/dummy_lcd_images"/> -->
+    <!-- <arg name="image_topic" default="/tum_tb_perception/dummy_lcd_images"/> -->
     <arg name="task_stage" default="1"/>
     <arg name="detection_score_threshold" default="0.7"/>
     <arg name="run_on_ros_trigger" default="false"/>
@@ -12,15 +12,15 @@
     <arg name="udp_ip" default="localhost"/>
     <arg name="udp_trigger_port" default="7000"/>
     <arg name="udp_output_port" default="8000"/>
-    <arg name="image_pub_topic" default="/eurobin_perception/slider_solver_images"/>
-    <arg name="trigger_topic" default="/eurobin_perception/silder_solver_trigger"/>
-    <arg name="input_image_pub_topic" default="/eurobin_perception/slider_solver_input_images"/>
-    <arg name="slider_distance_pub_topic" default="/eurobin_perception/slider_solver_result"/>
+    <arg name="image_pub_topic" default="/tum_tb_perception/slider_solver_images"/>
+    <arg name="trigger_topic" default="/tum_tb_perception/silder_solver_trigger"/>
+    <arg name="input_image_pub_topic" default="/tum_tb_perception/slider_solver_input_images"/>
+    <arg name="slider_distance_pub_topic" default="/tum_tb_perception/slider_solver_result"/>
     <arg name="publish_visual_output" default="true"/>
     <arg name="save_output" default="false"/>
     <arg name="debug" default="false"/>
 
-    <node pkg="eurobin_perception" type="slider_task_solver_node" name="slider_task_solver"
+    <node pkg="tum_tb_perception" type="slider_task_solver_node" name="slider_task_solver"
         output="screen" respawn="false">
         <param name="template_source_image_dir_path" type="str" value="$(arg template_source_image_dir_path)"/>
         <param name="output_dir_path" type="str" value="$(arg output_dir_path)"/>
