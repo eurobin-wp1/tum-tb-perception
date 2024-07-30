@@ -1,10 +1,17 @@
+<div align="center">
+
 # eurobin-perception
 
-A ROS package that contains the core perception libraries and tools for the euRobin challenge.
+A ROS package that contains the core perception libraries and tools for the euRobin taskboard challenge.
 
 Designed for and tested on Ubuntu 20.04 LTS, ROS Noetic with Python 3.8, and an Intel Realsense D435i.
 
 <b>Note: The package is in an initial development phase. It is unstable and may significantly change in concept and implementation.</b>
+  
+[![Python 3.8](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+</div>
 
 ## Contents
 - [➤ Overview](#overview)
