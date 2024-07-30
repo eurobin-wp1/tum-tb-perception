@@ -65,7 +65,7 @@ if __name__ == '__main__':
 
     model_weights_file_path = rospy.get_param('~model_weights_file_path', '')
     class_colors_file_path = rospy.get_param('~class_colors_file_path','')
-    dataset_dir_path = rospy.get_param('~dataset_dir_path', '')
+    labels_file_path = rospy.get_param('~labels_file_path', '')
     output_dir_path = rospy.get_param('~output_dir_path', 
                                       os.path.join(package_path, 'output_data'))
     confidence_threshold = rospy.get_param('~confidence_threshold', 0.7)
@@ -136,8 +136,8 @@ if __name__ == '__main__':
     ## ----------------------------------------------------------------------
 
     rospy.loginfo('[cnn_detector] Initializing ImageDetector...')
-    detector = ImageDetector(dataset_dir_path=dataset_dir_path, 
-                             model_weights_file_path=model_weights_file_path, 
+    detector = ImageDetector(model_weights_file_path=model_weights_file_path, 
+                             labels_file_path=labels_file_path,
                              class_colors_file_path=class_colors_file_path, 
                              confidence_threshold=confidence_threshold,
                              device=device)
