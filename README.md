@@ -54,16 +54,31 @@ In order to estimate the taskboard orientation, we find a coordinate frame whose
 
 ## Installation
 
-### From Source
+### Install Dependencies
 
 After cloning this repository into your catkin workspace, it is recommended to first install the Python package dependencies using `pip` by running the following within this directory:
 ```
 pip install -r requirements.txt
 ```
 
+### Build Package
+
 Build the package using:
 ```
 catkin build eurobin_perception
+```
+
+### Download Object Detection Model
+
+Make sure that `curl` is installed:
+```bash
+sudo apt update && sudo apt install curl
+```
+
+Run the following script from within this directory, which will download the Pytorch-based detection model to a `models` sub-directory:
+
+```bash
+./download_model.sh
 ```
 
 ## Usage
@@ -161,4 +176,3 @@ For ROS:
 ## Credits
 * ...
  -->
-
