@@ -14,8 +14,6 @@ model_file_name="tb_fasterrcnn_epochs_25_batches_1_tv_ratio_07_seed_2_20240121_1
 if [ ! -d ${model_dir_path} ]; then
     echo "[download_model] [INFO]: Directory ${model_dir_path} does not exist. Creating now..."
     mkdir -p ${model_dir_path};
-else
-    echo "[download_model] [INFO]: Second condition"
 fi
 
 # Download model:
