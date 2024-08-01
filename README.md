@@ -113,11 +113,6 @@ catkin build tum_tb_perception
 
 ### Download Detection Model
 
-Make sure that `curl` is installed:
-```bash
-sudo apt update && sudo apt install curl
-```
-
 Run the following script from within this directory, which will download the Pytorch-based detection model to a `models` sub-directory:
 
 ```bash
