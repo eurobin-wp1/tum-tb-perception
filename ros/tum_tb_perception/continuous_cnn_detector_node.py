@@ -24,15 +24,13 @@ import torch
 from rclpy import Parameter
 from rclpy.node import Node
 from cv_bridge import CvBridge, CvBridgeError
+from launch_ros.substitutions import FindPackageShare
 
 from std_msgs.msg import Bool
 from sensor_msgs.msg import Image
 from tum_tb_perception_msgs.msg import BoundingBox, BoundingBoxList
 
 from tum_tb_perception.image_detection import ImageDetector
-
-# Test: get pkg path for arg default values:
-from launch_ros.substitutions import FindPackageShare
 
 supported_torch_devices_ = ['cpu', 'gpu']
 
@@ -116,8 +114,9 @@ class CNNDetectorNode(Node):
         # Initialize messages:
         self.current_image_msg = None
 
-        # Initialize timer:
-        self.timer = self.create_timer(float(1. / self.rate), self.timer_callback)
+        # Currently unused:
+        # # Initialize timer:
+        # self.timer = self.create_timer(float(1. / self.rate), self.timer_callback)
         
         # Initialize data variables:
         self.initialize()
@@ -168,10 +167,10 @@ class CNNDetectorNode(Node):
                                       confidence_threshold=self.confidence_threshold,
                                       device=self.device)
 
-        self.current_time = time.time()
-        self.timer_counter = 0.
-
-        self.rate_object = self.create_rate(self.rate)
+        # Currently unused:
+        # self.current_time = time.time()
+        # self.timer_counter = 0.
+        # self.rate_object = self.create_rate(self.rate)
 
     def image_callback(self, msg):
         self.current_image_msg = msg
@@ -180,15 +179,15 @@ class CNNDetectorNode(Node):
         self.get_logger().info('Received trigger ROS message')
         self.ros_triggered = msg.data
 
-    def timer_callback(self):
-        pass
+    # Currently unused:
+    # def timer_callback(self):
+    #     pass
 
     def save_data(self):
         # TODO: Move data saving here
         raise NotImplementedError
 
     def run_node(self):
-        # raise NotImplementedError
         try:
             while rclpy.ok():
                 rclpy.spin_once(self)
@@ -198,11 +197,8 @@ class CNNDetectorNode(Node):
                     # block does not work for the inner while loop (does not terminate cleanly).
                     signal.signal(signal.SIGINT, signal.SIG_DFL);
                     while not self.ros_triggered:
-                        # rate.sleep()
-                        # self.rate_object.sleep()
-
                         rclpy.spin_once(self)
-                        time.sleep(0.1)
+                        time.sleep(float(1. / self.rate))
                     self.ros_triggered = False
                 elif self.run_on_udp_trigger:
                     # Note: the following will block until a message is received:
@@ -226,17 +222,10 @@ class CNNDetectorNode(Node):
                                                f'message format!. Ignoring...')
                         continue
                 else:
-                    # Note: probably does not exist in ROS2:
-                    # try:
-                    #     rate.sleep()
-                    # except rospy.ROSTimeMovedBackwardsException as e:
-                    #     rospy.logwarn('[cnn_detector] Caught ROSTimeMovedBackwardsException ' + \
-                    #                   'when executing rate.sleep(). This can happen when ' + \
-                    #                   'incoming messages had stopped, and have just ' + \
-                    #                   'resumed publishing.')
-
+                    # Currently unused:
                     # self.rate_object.sleep()
-                    time.sleep(0.1)
+
+                    time.sleep(float(1. / self.rate))
 
                 self.get_logger().info('Running detection model on image...')
                 detection_start_time = time.time()
@@ -324,16 +313,12 @@ def main(args=None):
                                    f'{cnn_detector.image_topic}')
     cnn_detector.get_logger().info(f'Waiting for reception of first image message...')
 
-    # rclpy.spin(cnn_detector)
-
     try:
         while cnn_detector.current_image_msg is None:
-            # rospy.sleep(0.1)
             rclpy.spin_once(cnn_detector)
-            ## Seems to block?:
+            # Will block when not spinning:
             # cnn_detector.rate_object.sleep()
-            time.sleep(0.1)
-            # cnn_detector.get_logger().info(f'Waiting...')
+            time.sleep(float(1. / cnn_detector.rate))
     # except (KeyboardInterrupt, rospy.ROSInterruptException):
     except KeyboardInterrupt:
         cnn_detector.get_logger().info(f'Terminating...')
@@ -358,13 +343,6 @@ def main(args=None):
         cnn_detector.get_logger().info(f'Continuously running detection on ' + \
                                f'incoming image messages...')
 
-    # # try-except inspired by (https://answers.ros.org/question/406469/ros-2-how-to-quit-a-node-from-within-a-callback/)
-    # try:
-    #     rclpy.spin(cnn_detector)
-    # except SystemExit:
-    #     rclpy.logging.get_logger('rclpy').info('Stopping node...')
-
-    ## TODO: test and iterate:
     try:
         cnn_detector.run_node()
     except SystemExit:
