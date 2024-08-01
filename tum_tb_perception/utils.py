@@ -170,12 +170,12 @@ def get_iou_score(bbox_1_dict, bbox_2_dict):
 
 def bbox_list_msg_to_list(bbox_list_msg):
     """
-    Converts the contents of a eurobin_perception.BoundingBoxList detection
+    Converts the contents of a tum_tb_perception_msgs.BoundingBoxList detection
     result ROS message into a list of dicts containing the same bbox data.
 
     Parameters
     ----------
-    bbox_list_msg: eurobin_perception.BoundingBoxList
+    bbox_list_msg: tum_tb_perception_msgs.BoundingBoxList
         ROS message containing detector results (list of bboxes)
 
     Returns
@@ -349,12 +349,12 @@ def rotation_matrix_from_vectors(vec_1, vec_2):
 
 def obj_list_msg_to_json(object_list_msg, orientation_success):
     """
-    Converts an eurobin_perception.ObjectList ROS message to a JSON string.
+    Converts an tum_tb_perception_msgs.ObjectList ROS message to a JSON string.
     The data is restructured in a list of dicts.
 
     Parameters
     ----------
-    object_list_msg: eurobin_perception.ObjectList
+    object_list_msg: tum_tb_perception_msgs.ObjectList
         Pose information on detected objects (from the pose_estimator)
 
     Returns

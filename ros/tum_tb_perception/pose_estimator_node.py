@@ -32,11 +32,11 @@ import sensor_msgs_py.point_cloud2 as pc2
 from geometry_msgs.msg import Point, Pose, Quaternion, Vector3, TransformStamped
 from sensor_msgs.msg import PointCloud, PointCloud2, CameraInfo
 from visualization_msgs.msg import Marker, MarkerArray
-from eurobin_msgs.msg import BoundingBoxList, ObjectList, Object
+from tum_tb_perception_msgs.msg import BoundingBoxList, ObjectList, Object
 
-from eurobin_perception.pose_estimation import TaskboardPoseEstimator
-from eurobin_perception.utils import bbox_list_msg_to_list, obj_list_msg_to_json
-from eurobin_perception.visualization import load_class_color_map
+from tum_tb_perception.pose_estimation import TaskboardPoseEstimator
+from tum_tb_perception.utils import bbox_list_msg_to_list, obj_list_msg_to_json
+from tum_tb_perception.visualization import load_class_color_map
 
 # Test: get pkg path for arg default values:
 from launch_ros.substitutions import FindPackageShare
@@ -122,26 +122,6 @@ def clear_object_markers():
     # Reset object marker ID:
     object_marker_id_ = 0
 
-def get_camera_params_dict():
-    """
-    Retrieves and returns camera parameters in a dict.
-
-    Parameters
-    -------
-    None
-
-    Returns
-    -------
-    camera_params_dict: dict
-        Camera intrinsic parameters (P matrix elements)
-    """
-    global current_camera_info_msg_ 
-
-    f_x = current_camera_info_msg_.P[0]; f_y = current_camera_info_msg_.P[5]
-    c_x = current_camera_info_msg_.P[2]; c_y = current_camera_info_msg_.P[6]
-
-    return {'f_x': f_x, 'f_y': f_y, 'c_x': c_x, 'c_y': c_y}
-
 
 ## ----------------------------------------------------------------------
 ## ROS Nodes, Callbacks and Message Initializations:
@@ -152,7 +132,7 @@ class PoseEstimatorNode(Node):
     def __init__(self):
         super().__init__('pose_estimator')
 
-        self.pkg_share_path = FindPackageShare(package='eurobin_perception').find('eurobin_perception')
+        self.pkg_share_path = FindPackageShare(package='tum_tb_perception').find('tum_tb_perception')
 
         # Get node parameters:
         self.declare_parameter('class_colors_file_path', 
@@ -164,11 +144,11 @@ class PoseEstimatorNode(Node):
         self.declare_parameter('udp_output_port', 6000)
         self.declare_parameter('pointcloud_topic', '/camera/depth/color/points')
         self.declare_parameter('camera_info_topic', '/camera/color/camera_info')
-        self.declare_parameter('detector_result_topic', '/eurobin_perception/detection_result')
-        self.declare_parameter('object_positions_pub_topic', '/eurobin_perception/object_positions')
-        self.declare_parameter('object_poses_pub_topic', '/eurobin_perception/object_poses')
-        self.declare_parameter('object_marker_pub_topic', '/eurobin_perception/object_markers')
-        self.declare_parameter('cropped_pc_pub_topic', '/eurobin_perception/cropped_pc')
+        self.declare_parameter('detector_result_topic', '/tum_tb_perception/detection_result')
+        self.declare_parameter('object_positions_pub_topic', '/tum_tb_perception/object_positions')
+        self.declare_parameter('object_poses_pub_topic', '/tum_tb_perception/object_poses')
+        self.declare_parameter('object_marker_pub_topic', '/tum_tb_perception/object_markers')
+        self.declare_parameter('cropped_pc_pub_topic', '/tum_tb_perception/cropped_pc')
         self.declare_parameter('save_output', False)
         self.declare_parameter('rate', 10)
         self.declare_parameter('debug', False)
@@ -242,6 +222,7 @@ class PoseEstimatorNode(Node):
         ## ----------------------------------------------------------------------
 
         self.get_logger().info(f'Initializing TaskboardPoseEstimator...')
+        # Initialize TaskboardPoseEstimator (with current camera parameters):
         self.position_estimator = TaskboardPoseEstimator(class_colors_dict=load_class_color_map(self.class_colors_file_path))
 
         # Set up output data directory:
@@ -283,6 +264,24 @@ class PoseEstimatorNode(Node):
     def save_data(self):
         # TODO: Move data saving here
         raise NotImplementedError
+
+    def get_camera_params_dict(self):
+        """
+        Retrieves and returns camera parameters in a dict.
+
+        Parameters
+        -------
+        None
+
+        Returns
+        -------
+        camera_params_dict: dict
+            Camera intrinsic parameters (P matrix elements)
+        """
+        f_x = self.current_camera_info_msg_.P[0]; f_y = self.current_camera_info_msg_.P[5]
+        c_x = self.current_camera_info_msg_.P[2]; c_y = self.current_camera_info_msg_.P[6]
+
+        return {'f_x': f_x, 'f_y': f_y, 'c_x': c_x, 'c_y': c_y}
 
     def run_node(self):
         pass
@@ -495,28 +494,29 @@ def main(args=None):
     ## ROS Initializations:
     ## ----------------------------------------------------------------------
     rclpy.init(args=args)
-    pose_estimator = PoseEstimatorNode()
+    pose_estimator_node = PoseEstimatorNode()
 
     ## ----------------------------------------------------------------------
     ## Estimator Execution:
     ## ----------------------------------------------------------------------
 
-    pose_estimator.get_logger().info(f'Waiting for first camera info message ' + \
-                                     f'on topic: {pose_estimator.camera_info_topic}')
+    pose_estimator_node.get_logger().info(f'Waiting for first camera info message ' + \
+                                     f'on topic: {pose_estimator_node.camera_info_topic}')
     try:
-        while pose_estimator.current_camera_info_msg is None:
+        while pose_estimator_node.current_camera_info_msg is None:
             # rospy.sleep(0.1)
             # rclpy.spin_once(pose_estimator)
-            pose_estimator.rate_object.sleep()
+            pose_estimator_node.rate_object.sleep()
     # except (KeyboardInterrupt, rospy.ROSInterruptException):
     except KeyboardInterrupt:
-        pose_estimator.get_logger().info(f'Stopping node......')
-        pose_estimator.destroy_node()
+        pose_estimator_node.get_logger().info(f'Stopping node......')
+        pose_estimator_node.destroy_node()
         rclpy.shutdown()
 
-    pose_estimator.get_logger().info(f'Received first camera info message')
-    pose_estimator.get_logger().info(f'Will estimate object poses for every message ' + \
-                                     f'received on topic: {pose_estimator.detector_result_topic}')
+    pose_estimator_node.get_logger().info(f'Received first camera info message')
+    pose_estimator_node.position_estimator.load_camera_params(pose_estimator_node.get_camera_params_dict())
+    pose_estimator_node.get_logger().info(f'Will estimate object poses for every message ' + \
+                                     f'received on topic: {pose_estimator_node.detector_result_topic}')
 
     # # try-except inspired by (https://answers.ros.org/question/406469/ros-2-how-to-quit-a-node-from-within-a-callback/)
     # try:
@@ -526,7 +526,7 @@ def main(args=None):
 
     ## TODO: test and iterate:
     try:
-        pose_estimator.run_node()
+        pose_estimator_node.run_node()
     except SystemExit:
         rclpy.logging.get_logger('rclpy').info('Stopping node...')
 

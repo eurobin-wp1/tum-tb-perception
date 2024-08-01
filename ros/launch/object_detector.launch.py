@@ -11,7 +11,7 @@ def generate_launch_description():
     model_weights_file_path_launch_arg = DeclareLaunchArgument(
         'model_weights_file_path', 
         default_value=PathJoinSubstitution([
-            FindPackageShare(package='eurobin_perception'), 
+            FindPackageShare(package='tum_tb_perception'), 
             'models', 
             'tb_fasterrcnn_epochs_25_batches_1_tv_ratio_07_seed_2_20240121_154144.pt'
         ]),
@@ -20,14 +20,17 @@ def generate_launch_description():
     class_colors_file_path_launch_arg = DeclareLaunchArgument(
         'class_colors_file_path', 
         default_value=PathJoinSubstitution([
-            FindPackageShare(package='eurobin_perception'), 
+            FindPackageShare(package='tum_tb_perception'), 
             'config', 'class_colors_taskboard.yaml'
         ]),
         description='TODO'
     )
-    dataset_dir_path_launch_arg = DeclareLaunchArgument(
-        'dataset_dir_path', 
-        default_value='/home/ahmed/tum/workspace/euRobin/detection_task/dataset',
+    labels_file_path_launch_arg = DeclareLaunchArgument(
+        'labels_file_path', 
+        default_value=PathJoinSubstitution([
+            FindPackageShare(package='tum_tb_perception'), 
+            'config', 'labels.txt'
+        ]),
         description='TODO'
     )
     output_dir_path_launch_arg = DeclareLaunchArgument(
@@ -67,22 +70,22 @@ def generate_launch_description():
     )
     trigger_topic_launch_arg = DeclareLaunchArgument(
         'trigger_topic', 
-        default_value='/eurobin_perception/detector_trigger',
+        default_value='/tum_tb_perception/detector_trigger',
         description='TODO'
     )
     image_pub_topic_launch_arg = DeclareLaunchArgument(
         'image_pub_topic', 
-        default_value='/eurobin_perception/detection_images',
+        default_value='/tum_tb_perception/detection_images',
         description='TODO'
     )
     input_image_pub_topic_launch_arg = DeclareLaunchArgument(
         'input_image_pub_topic', 
-        default_value='/eurobin_perception/input_images',
+        default_value='/tum_tb_perception/input_images',
         description='TODO'
     )
     detection_pub_topic_launch_arg = DeclareLaunchArgument(
         'detection_pub_topic', 
-        default_value='/eurobin_perception/detection_result',
+        default_value='/tum_tb_perception/detection_result',
         description='TODO'
     )
     publish_visual_output_launch_arg = DeclareLaunchArgument(
@@ -119,14 +122,14 @@ def generate_launch_description():
     )
 
     cnn_detector_node = Node(
-        package='eurobin_perception',
-        namespace='eurobin_perception',
+        package='tum_tb_perception',
+        namespace='tum_tb_perception',
         executable='continuous_cnn_detector_node.py',
         name='cnn_detector',
         parameters=[
             {'model_weights_file_path': LaunchConfiguration('model_weights_file_path')},
             {'class_colors_file_path': LaunchConfiguration('class_colors_file_path')},
-            {'dataset_dir_path': LaunchConfiguration('dataset_dir_path')},
+            {'labels_file_path': LaunchConfiguration('labels_file_path')},
             {'output_dir_path': LaunchConfiguration('output_dir_path')},
             {'confidence_threshold': LaunchConfiguration('confidence_threshold')},
             {'run_on_ros_trigger': LaunchConfiguration('run_on_ros_trigger')},
@@ -150,7 +153,7 @@ def generate_launch_description():
     return LaunchDescription([
         model_weights_file_path_launch_arg,
         class_colors_file_path_launch_arg,
-        dataset_dir_path_launch_arg,
+        labels_file_path_launch_arg,
         output_dir_path_launch_arg,
         confidence_threshold_launch_arg,
         run_on_ros_trigger_launch_arg,

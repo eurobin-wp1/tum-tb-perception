@@ -6,7 +6,7 @@ Contains functions for loading trained Pytorch detection models.
 
 import torchvision
 
-from eurobin_perception.dataset import TaskboardDataset
+from tum_tb_perception.dataset import TaskboardDataset
 
 def get_tb_cnn_model(num_classes):
     """

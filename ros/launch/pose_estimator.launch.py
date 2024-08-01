@@ -10,7 +10,7 @@ def generate_launch_description():
     class_colors_file_path_launch_arg = DeclareLaunchArgument(
         'class_colors_file_path', 
         default_value=PathJoinSubstitution([
-            FindPackageShare(package='eurobin_perception'), 
+            FindPackageShare(package='tum_tb_perception'), 
             'config', 'class_colors_taskboard.yaml'
         ]),
         description='TODO'
@@ -52,27 +52,27 @@ def generate_launch_description():
     )
     detector_result_topic_launch_arg = DeclareLaunchArgument(
         'detector_result_topic', 
-        default_value='/eurobin_perception/detection_result',
+        default_value='/tum_tb_perception/detection_result',
         description='TODO'
     )
     object_positions_pub_topic_launch_arg = DeclareLaunchArgument(
         'object_positions_pub_topic', 
-        default_value='/eurobin_perception/object_positions',
+        default_value='/tum_tb_perception/object_positions',
         description='TODO'
     )
     object_poses_pub_topic_launch_arg = DeclareLaunchArgument(
         'object_poses_pub_topic', 
-        default_value='/eurobin_perception/object_poses',
+        default_value='/tum_tb_perception/object_poses',
         description='TODO'
     )
     object_marker_pub_topic_launch_arg = DeclareLaunchArgument(
         'object_marker_pub_topic', 
-        default_value='/eurobin_perception/object_markers',
+        default_value='/tum_tb_perception/object_markers',
         description='TODO'
     )
     cropped_pc_pub_topic_launch_arg = DeclareLaunchArgument(
         'cropped_pc_pub_topic', 
-        default_value='/eurobin_perception/cropped_pc',
+        default_value='/tum_tb_perception/cropped_pc',
         description='TODO'
     )
     save_output_launch_arg = DeclareLaunchArgument(
@@ -92,8 +92,8 @@ def generate_launch_description():
     )
 
     pose_estimator_node = Node(
-        package='eurobin_perception',
-        namespace='eurobin_perception',
+        package='tum_tb_perception',
+        namespace='tum_tb_perception',
         executable='pose_estimator_node.py',
         name='pose_estimator',
         parameters=[

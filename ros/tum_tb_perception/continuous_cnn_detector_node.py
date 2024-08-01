@@ -27,9 +27,9 @@ from cv_bridge import CvBridge, CvBridgeError
 
 from std_msgs.msg import Bool
 from sensor_msgs.msg import Image
-from eurobin_msgs.msg import BoundingBox, BoundingBoxList
+from tum_tb_perception_msgs.msg import BoundingBox, BoundingBoxList
 
-from eurobin_perception.image_detection import ImageDetector
+from tum_tb_perception.image_detection import ImageDetector
 
 # Test: get pkg path for arg default values:
 from launch_ros.substitutions import FindPackageShare
@@ -51,14 +51,14 @@ class CNNDetectorNode(Node):
     def __init__(self):
         super().__init__('cnn_detector')
 
-        self.pkg_share_path = FindPackageShare(package='eurobin_perception').find('eurobin_perception')
+        self.pkg_share_path = FindPackageShare(package='tum_tb_perception').find('tum_tb_perception')
 
         # Get node parameters:
         self.declare_parameter('model_weights_file_path', 
             os.path.join(self.pkg_share_path, 'models/tb_fasterrcnn_epochs_25_batches_1_tv_ratio_07_seed_2_20240121_154144.pt'))
         self.declare_parameter('class_colors_file_path', 
             os.path.join(self.pkg_share_path, 'config/class_colors_taskboard.yaml'))
-        self.declare_parameter('dataset_dir_path', None)
+        self.declare_parameter('labels_file_path', 'config/labels.txt')
         self.declare_parameter('output_dir_path', '/tmp')
         self.declare_parameter('confidence_threshold', 0.7)
         self.declare_parameter('run_on_ros_trigger', True)
@@ -66,10 +66,10 @@ class CNNDetectorNode(Node):
         self.declare_parameter('udp_ip', 'localhost')
         self.declare_parameter('udp_trigger_port', 5000)
         self.declare_parameter('image_topic', '/camera/color/image_raw')
-        self.declare_parameter('trigger_topic', '/eurobin_perception/detector_trigger')
-        self.declare_parameter('image_pub_topic', '/eurobin_perception/detection_images')
-        self.declare_parameter('input_image_pub_topic', '/eurobin_perception/input_images')
-        self.declare_parameter('detection_pub_topic', '/eurobin_perception/detection_result')
+        self.declare_parameter('trigger_topic', '/tum_tb_perception/detector_trigger')
+        self.declare_parameter('image_pub_topic', '/tum_tb_perception/detection_images')
+        self.declare_parameter('input_image_pub_topic', '/tum_tb_perception/input_images')
+        self.declare_parameter('detection_pub_topic', '/tum_tb_perception/detection_result')
         self.declare_parameter('publish_visual_output', True)
         self.declare_parameter('save_output', False)
         self.declare_parameter('device', 'cpu')
@@ -78,7 +78,7 @@ class CNNDetectorNode(Node):
 
         self.model_weights_file_path = self.get_parameter('model_weights_file_path').value
         self.class_colors_file_path = self.get_parameter('class_colors_file_path').value
-        self.dataset_dir_path = self.get_parameter('dataset_dir_path').value
+        self.labels_file_path = self.get_parameter('labels_file_path').value
         self.output_dir_path = self.get_parameter('output_dir_path').value
         self.confidence_threshold = self.get_parameter('confidence_threshold').value
         self.run_on_ros_trigger = self.get_parameter('run_on_ros_trigger').value
@@ -164,8 +164,13 @@ class CNNDetectorNode(Node):
         ## ----------------------------------------------------------------------
 
         self.get_logger().info(f'Initializing ImageDetector...')
-        self.detector = ImageDetector(dataset_dir_path=self.dataset_dir_path, 
-                                      model_weights_file_path=self.model_weights_file_path, 
+        # self.detector = ImageDetector(labels_file_path=self.labels_file_path, 
+        #                               model_weights_file_path=self.model_weights_file_path, 
+        #                               class_colors_file_path=self.class_colors_file_path, 
+        #                               confidence_threshold=self.confidence_threshold,
+        #                               device=self.device)
+        self.detector = ImageDetector(model_weights_file_path=self.model_weights_file_path, 
+                                      labels_file_path=self.labels_file_path,
                                       class_colors_file_path=self.class_colors_file_path, 
                                       confidence_threshold=self.confidence_threshold,
                                       device=self.device)

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>eurobin_perception</name>
+  <name>tum_tb_perception</name>
   <version>0.1.0</version>
   <description>Perception libraries for the euRobin taskboard challenge</description>
 
@@ -17,7 +17,7 @@
   <depend>std_msgs</depend>
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
-  <depend>eurobin_msgs</depend>
+  <depend>tum_tb_perception_msgs</depend>
   <depend>cv_bridge</depend>
   <depend>visualization_msgs</depend>
   <depend>tf2_ros</depend>

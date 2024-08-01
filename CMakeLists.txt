@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(eurobin_perception)
+project(tum_tb_perception)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -24,14 +24,14 @@ find_package(tf2_ros REQUIRED)
 # find_package(message_runtime REQUIRED)
 # find_package(tf_conversions REQUIRED)
 
-find_package(eurobin_msgs REQUIRED)
+find_package(tum_tb_perception_msgs REQUIRED)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-## Lead to unresolvable error, so msgs are imported from separate package eurobin_msgs:
+## Lead to unresolvable error, so msgs are imported from separate package tum_tb_perception_msgs:
 # find_package(rosidl_default_generators REQUIRED)
 # rosidl_generate_interfaces(${PROJECT_NAME}
 #   "msg/Object.msg"
