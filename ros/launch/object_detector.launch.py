@@ -125,7 +125,7 @@ def generate_launch_description():
         package='tum_tb_perception',
         namespace='tum_tb_perception',
         executable='continuous_cnn_detector_node.py',
-        name='cnn_detector',
+        name='cnn_detector_node',
         parameters=[
             {'model_weights_file_path': LaunchConfiguration('model_weights_file_path')},
             {'class_colors_file_path': LaunchConfiguration('class_colors_file_path')},

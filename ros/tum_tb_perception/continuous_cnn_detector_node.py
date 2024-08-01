@@ -47,7 +47,7 @@ udp_buffer_size_ = 1024
 class CNNDetectorNode(Node):
 
     def __init__(self):
-        super().__init__('cnn_detector')
+        super().__init__('cnn_detector_node')
 
         self.pkg_share_path = FindPackageShare(package='tum_tb_perception').find('tum_tb_perception')
 
@@ -303,52 +303,52 @@ def main(args=None):
     ## ROS Initializations:
     ## ----------------------------------------------------------------------
     rclpy.init(args=args)
-    cnn_detector = CNNDetectorNode()
+    cnn_detector_node = CNNDetectorNode()
 
     ## ----------------------------------------------------------------------
     ## Detector Execution:
     ## ----------------------------------------------------------------------
 
-    cnn_detector.get_logger().info(f'Subscribing to image topic: ' \
-                                   f'{cnn_detector.image_topic}')
-    cnn_detector.get_logger().info(f'Waiting for reception of first image message...')
+    cnn_detector_node.get_logger().info(f'Subscribing to image topic: ' \
+                                   f'{cnn_detector_node.image_topic}')
+    cnn_detector_node.get_logger().info(f'Waiting for reception of first image message...')
 
     try:
-        while cnn_detector.current_image_msg is None:
-            rclpy.spin_once(cnn_detector)
+        while cnn_detector_node.current_image_msg is None:
+            rclpy.spin_once(cnn_detector_node)
             # Will block when not spinning:
-            # cnn_detector.rate_object.sleep()
-            time.sleep(float(1. / cnn_detector.rate))
+            # cnn_detector_node.rate_object.sleep()
+            time.sleep(float(1. / cnn_detector_node.rate))
     # except (KeyboardInterrupt, rospy.ROSInterruptException):
     except KeyboardInterrupt:
-        cnn_detector.get_logger().info(f'Terminating...')
-        cnn_detector.destroy_node()
+        cnn_detector_node.get_logger().info(f'Terminating...')
+        cnn_detector_node.destroy_node()
         rclpy.shutdown()
 
-    cnn_detector.get_logger().info(f'Received first image message')
+    cnn_detector_node.get_logger().info(f'Received first image message')
 
-    if cnn_detector.run_on_ros_trigger:
-        cnn_detector.get_logger().info(f'Will run detection on the latest ' + \
+    if cnn_detector_node.run_on_ros_trigger:
+        cnn_detector_node.get_logger().info(f'Will run detection on the latest ' + \
                                f'image message at every trigger ROS message on ' + \
-                               f'on topic {cnn_detector.trigger_topic}...')
-    elif cnn_detector.run_on_udp_trigger:
-        cnn_detector.get_logger().info(f'Will run detection on the latest ' + \
+                               f'on topic {cnn_detector_node.trigger_topic}...')
+    elif cnn_detector_node.run_on_udp_trigger:
+        cnn_detector_node.get_logger().info(f'Will run detection on the latest ' + \
                                f'image message at every trigger UDP message on ' + \
-                               f' over IP {udp_ip} and port {cnn_detector.udp_trigger_port}...')
+                               f' over IP {udp_ip} and port {cnn_detector_node.udp_trigger_port}...')
 
         udp_trigger_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         udp_trigger_socket.settimeout(None)
-        udp_trigger_socket.bind((cnn_detector.udp_ip, cnn_detector.udp_trigger_port))
+        udp_trigger_socket.bind((cnn_detector_node.udp_ip, cnn_detector_node.udp_trigger_port))
     else:
-        cnn_detector.get_logger().info(f'Continuously running detection on ' + \
+        cnn_detector_node.get_logger().info(f'Continuously running detection on ' + \
                                f'incoming image messages...')
 
     try:
-        cnn_detector.run_node()
+        cnn_detector_node.run_node()
     except SystemExit:
         rclpy.logging.get_logger('rclpy').info('Stopping node...')
 
-    cnn_detector.destroy_node()
+    cnn_detector_node.destroy_node()
     rclpy.shutdown()
 
 if __name__ == '__main__':
