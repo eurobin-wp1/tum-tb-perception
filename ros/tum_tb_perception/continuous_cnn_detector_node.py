@@ -122,8 +122,6 @@ class CNNDetectorNode(Node):
         # Initialize data variables:
         self.initialize()
 
-        # self.get_logger().info(f'Waiting for trigger message...\n')
-
     def initialize(self):
         self.ros_triggered = False
         self.bridge = CvBridge()
@@ -164,11 +162,6 @@ class CNNDetectorNode(Node):
         ## ----------------------------------------------------------------------
 
         self.get_logger().info(f'Initializing ImageDetector...')
-        # self.detector = ImageDetector(labels_file_path=self.labels_file_path, 
-        #                               model_weights_file_path=self.model_weights_file_path, 
-        #                               class_colors_file_path=self.class_colors_file_path, 
-        #                               confidence_threshold=self.confidence_threshold,
-        #                               device=self.device)
         self.detector = ImageDetector(model_weights_file_path=self.model_weights_file_path, 
                                       labels_file_path=self.labels_file_path,
                                       class_colors_file_path=self.class_colors_file_path, 
@@ -182,12 +175,6 @@ class CNNDetectorNode(Node):
 
     def image_callback(self, msg):
         self.current_image_msg = msg
-
-        if cnn_detector.debug:
-            self.get_logger().info(f'[DEBUG] Received image message')
-            self.get_logger().info(f'[DEBUG] {self.current_image_msg.height}')
-            self.get_logger().info(f'[DEBUG] {self.current_image_msg.width}')
-            self.get_logger().info(f'[DEBUG] {self.current_image_msg.header.frame_id}')
 
     def trigger_callback(self, msg):
         self.get_logger().info('Received trigger ROS message')
@@ -204,7 +191,7 @@ class CNNDetectorNode(Node):
         # raise NotImplementedError
         try:
             while rclpy.ok():
-                # cnn_detector.rate_object.sleep
+                rclpy.spin_once(self)
 
                 if self.run_on_ros_trigger:
                     # Note: using a signal SIGINT handler here because a try-except
@@ -212,7 +199,10 @@ class CNNDetectorNode(Node):
                     signal.signal(signal.SIGINT, signal.SIG_DFL);
                     while not self.ros_triggered:
                         # rate.sleep()
-                        cnn_detector.rate_object.sleep()
+                        # self.rate_object.sleep()
+
+                        rclpy.spin_once(self)
+                        time.sleep(0.1)
                     self.ros_triggered = False
                 elif self.run_on_udp_trigger:
                     # Note: the following will block until a message is received:
@@ -245,20 +235,21 @@ class CNNDetectorNode(Node):
                     #                   'incoming messages had stopped, and have just ' + \
                     #                   'resumed publishing.')
 
-                    cnn_detector.rate_object.sleep()
+                    # self.rate_object.sleep()
+                    time.sleep(0.1)
 
                 self.get_logger().info('Running detection model on image...')
                 detection_start_time = time.time()
 
                 try:
-                    image_cv = bridge.imgmsg_to_cv2(self.current_image_msg, "bgr8")
+                    image_cv = self.bridge.imgmsg_to_cv2(self.current_image_msg, "bgr8")
                 except CvBridgeError as e:
                     self.get_logger().info(f'Failed to convert image message to ' + \
                                            f'opencv format! Skipping...')
                     self.get_logger().info(f'Error: {e}')
                     continue
 
-                detector_result = selfdetector.detect_objects(
+                detector_result = self.detector.detect_objects(
                         image_cv, 
                         return_annotated_image=self.publish_visual_output or \
                                                self.save_output
@@ -281,20 +272,18 @@ class CNNDetectorNode(Node):
 
                     bbox_list_msg.bounding_boxes.append(bbox_msg)
 
-                bb_publisher.publish(bbox_list_msg)
+                self.bb_publisher.publish(bbox_list_msg)
 
-                if publish_visual_output:
-                    input_image_msg = bridge.cv2_to_imgmsg(image_cv, encoding="bgr8")
-                    ## TODO: Verify ROS2 alternative:
+                if self.publish_visual_output:
+                    input_image_msg = self.bridge.cv2_to_imgmsg(image_cv, encoding="bgr8")
                     input_image_msg.header.stamp = self.get_clock().now().to_msg()
                     input_image_msg.header.frame_id = self.current_image_msg.header.frame_id
                     self.input_image_publisher.publish(input_image_msg)
 
-                    detection_image_msg = bridge.cv2_to_imgmsg(detection_image_cv, 
-                                                               encoding="bgr8")
-                    ## TODO: Verify ROS2 alternative:
+                    detection_image_msg = self.bridge.cv2_to_imgmsg(detection_image_cv, 
+                                                                    encoding="bgr8")
                     detection_image_msg.header.stamp = self.get_clock().now().to_msg()
-                    detection_image_msg.header.frame_id = current_image_msg_.header.frame_id
+                    detection_image_msg.header.frame_id = self.current_image_msg.header.frame_id
                     self.detection_image_publisher.publish(detection_image_msg)
 
                 detection_time = time.time() - detection_start_time
@@ -327,16 +316,6 @@ def main(args=None):
     rclpy.init(args=args)
     cnn_detector = CNNDetectorNode()
 
-    # Test: read launch arg value:
-    # Note: avoided, since will print with alot of other ROS-specific debug msgs:
-    # cnn_detector.get_logger().debug(f'Loading class_colors_file_path from ' \
-    #                                 f'{cnn_detector.class_colors_file_path}')
-    if cnn_detector.debug:
-        cnn_detector.get_logger().info(f'Loading model from ' \
-                                       f'{cnn_detector.model_weights_file_path}')
-        cnn_detector.get_logger().info(f'[DEBUG] confidence_threshold: ' \
-                                       f'{cnn_detector.confidence_threshold}')
-
     ## ----------------------------------------------------------------------
     ## Detector Execution:
     ## ----------------------------------------------------------------------
@@ -345,18 +324,16 @@ def main(args=None):
                                    f'{cnn_detector.image_topic}')
     cnn_detector.get_logger().info(f'Waiting for reception of first image message...')
 
-    # cnn_detector.get_logger().info(f'[DEBUG] cnn_detector.get_clock().now(): {cnn_detector.get_clock().now()}')
-    # cnn_detector.get_logger().info(f'[DEBUG] type(cnn_detector.get_clock().now()): {type(cnn_detector.get_clock().now())}')
-    # cnn_detector.get_logger().info(f'[DEBUG] cnn_detector.get_clock().now().to_msg(): {cnn_detector.get_clock().now().to_msg()}')
-    # cnn_detector.get_logger().info(f'[DEBUG] type(cnn_detector.get_clock().now().to_msg()): {type(cnn_detector.get_clock().now().to_msg())}')
-    # test_msg = Image()
-    # test_msg.header.stamp = cnn_detector.get_clock().now().to_msg()
+    # rclpy.spin(cnn_detector)
 
     try:
         while cnn_detector.current_image_msg is None:
             # rospy.sleep(0.1)
-            # rclpy.spin_once(cnn_detector)
-            cnn_detector.rate_object.sleep()
+            rclpy.spin_once(cnn_detector)
+            ## Seems to block?:
+            # cnn_detector.rate_object.sleep()
+            time.sleep(0.1)
+            # cnn_detector.get_logger().info(f'Waiting...')
     # except (KeyboardInterrupt, rospy.ROSInterruptException):
     except KeyboardInterrupt:
         cnn_detector.get_logger().info(f'Terminating...')
@@ -365,12 +342,12 @@ def main(args=None):
 
     cnn_detector.get_logger().info(f'Received first image message')
 
-    if run_on_ros_trigger:
-        self.get_logger().info(f'Will run detection on the latest ' + \
+    if cnn_detector.run_on_ros_trigger:
+        cnn_detector.get_logger().info(f'Will run detection on the latest ' + \
                                f'image message at every trigger ROS message on ' + \
                                f'on topic {cnn_detector.trigger_topic}...')
-    elif run_on_udp_trigger:
-        self.get_logger().info(f'Will run detection on the latest ' + \
+    elif cnn_detector.run_on_udp_trigger:
+        cnn_detector.get_logger().info(f'Will run detection on the latest ' + \
                                f'image message at every trigger UDP message on ' + \
                                f' over IP {udp_ip} and port {cnn_detector.udp_trigger_port}...')
 
@@ -378,7 +355,7 @@ def main(args=None):
         udp_trigger_socket.settimeout(None)
         udp_trigger_socket.bind((cnn_detector.udp_ip, cnn_detector.udp_trigger_port))
     else:
-        self.get_logger().info(f'Continuously running detection on ' + \
+        cnn_detector.get_logger().info(f'Continuously running detection on ' + \
                                f'incoming image messages...')
 
     # # try-except inspired by (https://answers.ros.org/question/406469/ros-2-how-to-quit-a-node-from-within-a-callback/)

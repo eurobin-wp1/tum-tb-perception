@@ -65,7 +65,7 @@ def generate_launch_description():
     )
     image_topic_launch_arg = DeclareLaunchArgument(
         'image_topic', 
-        default_value='/camera/color/image_raw',
+        default_value='/camera/camera/color/image_raw',
         description='TODO'
     )
     trigger_topic_launch_arg = DeclareLaunchArgument(
