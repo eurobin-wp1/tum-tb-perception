@@ -40,7 +40,6 @@ Both functionalities can be triggered through ROS or UDP messages.
 
 The diagram below visualizes the three nodes within this package and their input and output ROS topics and messages.
 
-<!-- ![component_diagram](https://github.com/user-attachments/assets/c728dc74-35c7-4c96-b2df-45b6d6cc6854) -->
 ![component_diagram](docs/images/component_diagram.png)
 
 ## Example Results
@@ -113,11 +112,6 @@ catkin build tum_tb_perception
 ```
 
 ### Download Detection Model
-
-Make sure that `curl` is installed:
-```bash
-sudo apt update && sudo apt install curl
-```
 
 Run the following script from within this directory, which will download the Pytorch-based detection model to a `models` sub-directory:
 
