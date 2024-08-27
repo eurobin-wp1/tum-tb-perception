@@ -39,6 +39,7 @@ from tum_tb_perception_msgs.msg import BoundingBoxList, ObjectList, Object
 from tum_tb_perception.pose_estimation import TaskboardPoseEstimator
 from tum_tb_perception.utils import bbox_list_msg_to_list, obj_list_msg_to_json
 from tum_tb_perception.visualization import load_class_color_map
+from tum_tb_perception.dataset import load_labels
 
 
 ## ----------------------------------------------------------------------
@@ -67,6 +68,7 @@ class PoseEstimatorNode(Node):
         self.declare_parameter('object_poses_pub_topic', '/tum_tb_perception/object_poses')
         self.declare_parameter('object_marker_pub_topic', '/tum_tb_perception/object_markers')
         self.declare_parameter('cropped_pc_pub_topic', '/tum_tb_perception/cropped_pc')
+        self.declare_parameter('labels_file_path', 'config/labels.txt')
         self.declare_parameter('save_output', False)
         self.declare_parameter('rate', 10)
         self.declare_parameter('debug', False)
@@ -84,6 +86,7 @@ class PoseEstimatorNode(Node):
         self.object_poses_pub_topic = self.get_parameter('object_poses_pub_topic').value
         self.object_marker_pub_topic = self.get_parameter('object_marker_pub_topic').value
         self.cropped_pc_pub_topic = self.get_parameter('cropped_pc_pub_topic').value
+        self.labels_file_path = self.get_parameter('labels_file_path').value
         self.save_output = self.get_parameter('save_output').value
         self.rate = self.get_parameter('rate').value
         self.debug = self.get_parameter('debug').value
@@ -164,6 +167,8 @@ class PoseEstimatorNode(Node):
         # self.rate_object = self.create_rate(self.rate)
 
         self.object_marker_id = 0
+
+        self.labels_list = load_labels(self.labels_file_path)
 
     ## ----------------------------------------------------------------------
     ## Callback Definitions
@@ -293,7 +298,6 @@ class PoseEstimatorNode(Node):
         self.object_marker_id = 0
 
     def run_node(self):
-        pass
         try:
             while rclpy.ok():
                 rclpy.spin_once(self)
@@ -462,6 +466,20 @@ class PoseEstimatorNode(Node):
 
                             # Re-publish objects list after adding orientations, and broadcast a frame for each:
                             updated_object_list_msg = ObjectList()
+
+                            detected_objects_list = [object_msg.label for object_msg in object_list_msg.objects]
+                            self.get_logger().info(f'[DEBUG] detected_objects_list: \n{detected_objects_list}')
+                            self.get_logger().info(f'[DEBUG] self.labels_list: \n{self.labels_list}')
+
+                            # Purge undetected objects from TF tree (RViz visualization):
+                            for label in self.labels_list:
+                                if label not in detected_objects_list:
+                                    tf_msg = TransformStamped()
+                                    tf_msg.header.stamp = self.get_clock().now().to_msg()
+                                    tf_msg.header.frame_id = self.current_camera_info_msg.header.frame_id
+                                    tf_msg.header.frame_id = 'non-existent'
+                                    tf_msg.child_frame_id = label + '_frame'
+                                    self.tf_broadcaster.sendTransform(tf_msg)
 
                             self.object_marker_id = 0
                             for object_msg in object_list_msg.objects:
