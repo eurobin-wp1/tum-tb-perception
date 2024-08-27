@@ -42,12 +42,12 @@ def generate_launch_description():
     )
     pointcloud_topic_launch_arg = DeclareLaunchArgument(
         'pointcloud_topic', 
-        default_value='/camera/depth/color/points',
+        default_value='/camera/camera/depth/color/points',
         description='TODO'
     )
     camera_info_topic_launch_arg = DeclareLaunchArgument(
         'camera_info_topic', 
-        default_value='/camera/color/camera_info',
+        default_value='/camera/camera/color/camera_info',
         description='TODO'
     )
     detector_result_topic_launch_arg = DeclareLaunchArgument(
