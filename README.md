@@ -46,7 +46,7 @@ The diagram below visualizes the three nodes within this package and their input
 
 Taskboard CNN detection and pose estimation results from the <b>CNN detector</b> and <b>pose estimator</b> nodes shown on RViz:
 <p float="left" align="center">
-  <img src="docs/images/perception_cnn_object_detection_and_3d_pose_estimation_rviz_screenshot.png" width="90%" /> 
+  <img src="docs/images/perception_cnn_object_detection_and_3d_pose_estimation_rviz_screenshot_2.png" width="90%" /> 
 </p>
 
 &nbsp;
