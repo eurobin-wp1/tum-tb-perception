@@ -32,7 +32,7 @@ To solve the euRobin challenge, <b>tum_tb_perception</b> implements the followin
 * detecting and estimating the locations of a task board and its components to enable a robot to reach and manipulate each component,
 * estimating the positions of elements on the LCD screen to solve the slider task.
 
-The detection and localization of the task board components consists of two parts. A [Faster R-CNN](https://pytorch.org/vision/main/models/faster_rcnn.html) CNN model that has been trained on a dataset of RGB task board images is deployed on an <b>CNN detector</b> node. A <b>pose estimator</b> node then uses the detection result and depth point cloud data to estimate the 3D position of each detected task board component and the pose of the task board (position and orientation).
+The detection and localization of the task board components consists of two parts. A [Faster R-CNN](https://pytorch.org/vision/main/models/faster_rcnn.html) CNN model that has been trained on a dataset of RGB task board images is deployed on a <b>CNN detector</b> node. A <b>pose estimator</b> node then uses the detection result and depth point cloud data to estimate the 3D position of each detected task board component and the pose of the task board (position and orientation).
 
 The perception aspect of the slider task: estimating the distance between a start and and end marker on the LCD screen, is handled by a <b>slider task solver</b> node.
 
