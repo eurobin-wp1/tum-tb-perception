@@ -45,7 +45,7 @@ class PositionEstimator(object):
         to each object that was detected in an RGB image.
         Returns the list of points (coordinates) that fall within the field of view
         of each object's 2D bounding box.
-        Optionally returns the list of 3D points that form the  "cropped" 
+        Optionally returns the list of 3D points that from the "cropped" 
         pointcloud of a given object (label).
 
         The function performs the following operations:
@@ -334,7 +334,7 @@ class TaskboardPoseEstimator(PositionEstimator):
 
     def estimate_tb_orientation(self, tb_points_array, object_positions_dict, debug=False, **kwargs):
         """
-        Implements and algorithm that estimates the orientation of the taskboard, given
+        Implements an algorithm that estimates the orientation of the taskboard, given
         point cloud that have been classified according to the taskboard classes.
         This is achieved by:
             - Filtering the taskboard points using agglomerative clustering
