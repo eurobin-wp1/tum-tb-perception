@@ -81,7 +81,7 @@ In order to estimate the task board orientation, we find a coordinate frame whos
 * if possible, finding the specific directions of the `x` and `y` vectors using information about the 3D positions of objects:
   * dividing the task board rectangle into four quadrants
   * recognizing quadrants 1-4 from the objects that lie within them (e.g. `slider` is expected to be inside quadrant 4)
-  * finding the correspondin corners of the task board
+  * finding the corresponding corners of the task board
   * setting the directions of `x` and `y` such that they point towards the two right-side corners and the top-side corners, respectively.
 
 ### Slider Task Solver
