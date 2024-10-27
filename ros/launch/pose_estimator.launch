@@ -14,6 +14,7 @@
     <arg name="object_poses_pub_topic" default="/tum_tb_perception/object_poses"/>
     <arg name="object_marker_pub_topic" default="/tum_tb_perception/object_markers"/>
     <arg name="cropped_pc_pub_topic" default="/tum_tb_perception/cropped_pc"/>
+    <arg name="cropped_pc_label" default="taskboard"/>
     <arg name="save_output" default="false"/>
     <arg name="debug" default="false"/>
 
@@ -32,6 +33,7 @@
         <param name="object_poses_pub_topic" type="str" value="$(arg object_poses_pub_topic)"/>
         <param name="object_marker_pub_topic" type="str" value="$(arg object_marker_pub_topic)"/>
         <param name="cropped_pc_pub_topic" type="str" value="$(arg cropped_pc_pub_topic)"/>
+        <param name="cropped_pc_label" type="str" value="$(arg cropped_pc_label)"/>
         <param name="save_output" type="bool" value="$(arg save_output)"/>
         <param name="debug" type="bool" value="$(arg debug)"/>
     </node>

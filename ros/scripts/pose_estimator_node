@@ -184,6 +184,8 @@ if __name__ == '__main__':
     object_marker_pub_topic = rospy.get_param('~object_marker_pub_topic', '/tum_tb_perception/object_markers')
     cropped_pc_pub_topic = rospy.get_param('~cropped_pc_pub_topic', '/tum_tb_perception/cropped_pc')
 
+    cropped_pc_label = rospy.get_param('~cropped_pc_label', 'taskboard')
+
     debug = rospy.get_param('~debug', False)
     save_output = rospy.get_param('~save_output', False)
 
@@ -260,7 +262,7 @@ if __name__ == '__main__':
                     object_positions_dict, object_points_dict, cropped_pc_points_array = \
                             position_estimator.estimate_object_positions(
                                     bbox_dict_list, pc_point_list, 
-                                    cropped_pc_label='taskboard', 
+                                    cropped_pc_label=cropped_pc_label, 
                                     debug=debug
                     )
                     tb_points_array = object_points_dict['taskboard']
