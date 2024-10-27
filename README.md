@@ -32,7 +32,7 @@ To solve the euRobin challenge, <b>tum_tb_perception</b> implements the followin
 * detecting and estimating the locations of a task board and its components to enable a robot to reach and manipulate each component,
 * estimating the positions of elements on the LCD screen to solve the slider task.
 
-The detection and localization of the task board components consists of two parts. A [Faster R-CNN](https://pytorch.org/vision/main/models/faster_rcnn.html) CNN model that has been trained on a dataset of RGB task board images is deployed on an <b>CNN detector</b> node. A <b>pose estimator</b> node then uses the detection result and depth point cloud data to estimate the 3D position of each detected task board component and the pose of the task board (position and orientation).
+The detection and localization of the task board components consists of two parts. A [Faster R-CNN](https://pytorch.org/vision/main/models/faster_rcnn.html) CNN model that has been trained on a dataset of RGB task board images is deployed on a <b>CNN detector</b> node. A <b>pose estimator</b> node then uses the detection result and depth point cloud data to estimate the 3D position of each detected task board component and the pose of the task board (position and orientation).
 
 The perception aspect of the slider task: estimating the distance between a start and and end marker on the LCD screen, is handled by a <b>slider task solver</b> node.
 
@@ -46,7 +46,7 @@ The diagram below visualizes the three nodes within this package and their input
 
 Taskboard CNN detection and pose estimation results from the <b>CNN detector</b> and <b>pose estimator</b> nodes shown on RViz:
 <p float="left" align="center">
-  <img src="docs/images/perception_cnn_object_detection_and_3d_pose_estimation_rviz_screenshot.png" width="90%" /> 
+  <img src="docs/images/perception_cnn_object_detection_and_3d_pose_estimation_rviz_screenshot_2.png" width="90%" /> 
 </p>
 
 &nbsp;
@@ -81,7 +81,7 @@ In order to estimate the task board orientation, we find a coordinate frame whos
 * if possible, finding the specific directions of the `x` and `y` vectors using information about the 3D positions of objects:
   * dividing the task board rectangle into four quadrants
   * recognizing quadrants 1-4 from the objects that lie within them (e.g. `slider` is expected to be inside quadrant 4)
-  * finding the correspondin corners of the task board
+  * finding the corresponding corners of the task board
   * setting the directions of `x` and `y` such that they point towards the two right-side corners and the top-side corners, respectively.
 
 ### Slider Task Solver
