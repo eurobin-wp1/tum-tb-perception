@@ -348,7 +348,7 @@ class TaskboardPoseEstimator(PositionEstimator):
             - Computing the orientations of the vertical and horizontal sides of the taskboard
               using the positions of the identified corners.
               (These two vectors represents the taskboard's x and y axes.)
-            - Combining the three comouted vectors to form a matrix that describes the transformation
+            - Combining the three computed vectors to form a matrix that describes the transformation
               between the camera and taskboard frames, i.e. the taskboard's relative orientation.
 
         Optionally, the results of each stage are visualized on a 3D plot.
