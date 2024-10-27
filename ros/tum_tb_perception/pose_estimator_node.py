@@ -401,8 +401,8 @@ class PoseEstimatorNode(Node):
                         ## Parameters and Variables:
                         ## ----------------------------------------
 
-                        parameters = {'arrow_scale_factor': 0.2, 
-                                      'plot_fitted_rectangle': True, 
+                        parameters = {'arrow_scale_factor': 0.1, 
+                                      'plot_fitted_rectangle': False, 
                                       'plot_fitted_rectified_rectangle': True, 
                                       'hide_pc_points': False}
 
