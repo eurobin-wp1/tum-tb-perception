@@ -13,9 +13,6 @@ dist/
 # Vim
 *.swp
 
-# rviz
-*.rviz
-
 # Temporary files
 tmp/
 output_data/
