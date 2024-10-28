@@ -69,6 +69,7 @@ class PoseEstimatorNode(Node):
         self.declare_parameter('object_marker_pub_topic', '/tum_tb_perception/object_markers')
         self.declare_parameter('cropped_pc_pub_topic', '/tum_tb_perception/cropped_pc')
         self.declare_parameter('labels_file_path', 'config/labels.txt')
+        self.declare_parameter('cropped_pc_label', 'taskboard')
         self.declare_parameter('save_output', False)
         self.declare_parameter('rate', 10)
         self.declare_parameter('debug', False)
@@ -87,6 +88,7 @@ class PoseEstimatorNode(Node):
         self.object_marker_pub_topic = self.get_parameter('object_marker_pub_topic').value
         self.cropped_pc_pub_topic = self.get_parameter('cropped_pc_pub_topic').value
         self.labels_file_path = self.get_parameter('labels_file_path').value
+        self.cropped_pc_label = self.get_parameter('cropped_pc_label').value
         self.save_output = self.get_parameter('save_output').value
         self.rate = self.get_parameter('rate').value
         self.debug = self.get_parameter('debug').value
@@ -330,7 +332,7 @@ class PoseEstimatorNode(Node):
                         object_positions_dict, object_points_dict, cropped_pc_points_array = \
                             self.position_estimator.estimate_object_positions(
                                     bbox_dict_list, pc_point_list, 
-                                    cropped_pc_label='taskboard', 
+                                    cropped_pc_label=cropped_pc_label, 
                                     debug=self.debug
                         )
                         tb_points_array = object_points_dict['taskboard']

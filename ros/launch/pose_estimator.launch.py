@@ -83,6 +83,11 @@ def generate_launch_description():
         ]),
         description='TODO'
     )
+    cropped_pc_label_launch_arg = DeclareLaunchArgument(
+        'cropped_pc_label', 
+        default_value='taskboard',
+        description='TODO'
+    )
     save_output_launch_arg = DeclareLaunchArgument(
         'save_output', 
         default_value='False',
@@ -119,6 +124,7 @@ def generate_launch_description():
             {'object_marker_pub_topic': LaunchConfiguration('object_marker_pub_topic')},
             {'cropped_pc_pub_topic': LaunchConfiguration('cropped_pc_pub_topic')},
             {'labels_file_path': LaunchConfiguration('labels_file_path')},
+            {'cropped_pc_label': LaunchConfiguration('cropped_pc_label')},
             {'save_output': LaunchConfiguration('save_output')},
             {'rate': LaunchConfiguration('rate')},
             {'debug': LaunchConfiguration('debug')},
@@ -140,6 +146,7 @@ def generate_launch_description():
         object_marker_pub_topic_launch_arg,
         cropped_pc_pub_topic_launch_arg,
         labels_file_path_launch_arg,
+        cropped_pc_label_launch_arg,
         save_output_launch_arg,
         rate_launch_arg,
         debug_launch_arg,
