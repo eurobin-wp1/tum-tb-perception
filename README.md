@@ -307,6 +307,7 @@ tum-tb-perception
 * `rospy`
 * `rospkg`
 * `scipy`
+* `scikit-learn`
 * `torch`
 * `torchvision`
 
