@@ -4,7 +4,8 @@
     <arg name="class_colors_file_path" default="$(find tum_tb_perception)/config/class_colors_taskboard.yaml"/>
     <arg name="taskboard_frame_name" default="taskboard_frame"/>
     <arg name="num_retries" default="3"/>
-    <arg name="output_dir_path" default="$(find tum_tb_perception)/output_data"/>
+    <!-- <arg name="output_dir_path" default="$(find tum_tb_perception)/output_data"/> -->
+    <arg name="output_dir_path" default="/tmp"/>
     <arg name="udp_ip" default="localhost"/>
     <arg name="udp_output_port" default="6000"/>
     <arg name="point_cloud_topic" default="/camerka/depth/color/points"/>
