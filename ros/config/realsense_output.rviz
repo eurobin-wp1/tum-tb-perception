@@ -175,9 +175,9 @@ Visualization Manager:
     - Alpha: 1
       Class: rviz/Axes
       Enabled: true
-      Length: 0.10000000149011612
+      Length: 0.029999999329447746
       Name: Axes
-      Radius: 0.009999999776482582
+      Radius: 0.004999999888241291
       Reference Frame: taskboard_frame
       Show Trail: false
       Value: true
@@ -251,7 +251,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 0.40749070048332214
+      Distance: 0.6546885371208191
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -259,9 +259,9 @@ Visualization Manager:
         Value: false
       Field of View: 0.7853981852531433
       Focal Point:
-        X: 0.4980646073818207
-        Y: -0.05809421092271805
-        Z: -0.0186348594725132
+        X: 0.4967938959598541
+        Y: 0.02606211230158806
+        Z: -0.012562274932861328
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false

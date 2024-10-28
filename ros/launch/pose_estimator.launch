@@ -4,7 +4,8 @@
     <arg name="class_colors_file_path" default="$(find tum_tb_perception)/config/class_colors_taskboard.yaml"/>
     <arg name="taskboard_frame_name" default="taskboard_frame"/>
     <arg name="num_retries" default="3"/>
-    <arg name="output_dir_path" default="$(find tum_tb_perception)/output_data"/>
+    <!-- <arg name="output_dir_path" default="$(find tum_tb_perception)/output_data"/> -->
+    <arg name="output_dir_path" default="/tmp"/>
     <arg name="udp_ip" default="localhost"/>
     <arg name="udp_output_port" default="6000"/>
     <arg name="point_cloud_topic" default="/camerka/depth/color/points"/>
@@ -14,6 +15,7 @@
     <arg name="object_poses_pub_topic" default="/tum_tb_perception/object_poses"/>
     <arg name="object_marker_pub_topic" default="/tum_tb_perception/object_markers"/>
     <arg name="cropped_pc_pub_topic" default="/tum_tb_perception/cropped_pc"/>
+    <arg name="cropped_pc_label" default="taskboard"/>
     <arg name="save_output" default="false"/>
     <arg name="debug" default="false"/>
 
@@ -32,6 +34,7 @@
         <param name="object_poses_pub_topic" type="str" value="$(arg object_poses_pub_topic)"/>
         <param name="object_marker_pub_topic" type="str" value="$(arg object_marker_pub_topic)"/>
         <param name="cropped_pc_pub_topic" type="str" value="$(arg cropped_pc_pub_topic)"/>
+        <param name="cropped_pc_label" type="str" value="$(arg cropped_pc_label)"/>
         <param name="save_output" type="bool" value="$(arg save_output)"/>
         <param name="debug" type="bool" value="$(arg debug)"/>
     </node>

@@ -17,6 +17,7 @@ import time
 import copy
 import pickle
 import socket
+import datetime
 
 import rospy
 import rospkg
@@ -184,6 +185,8 @@ if __name__ == '__main__':
     object_marker_pub_topic = rospy.get_param('~object_marker_pub_topic', '/tum_tb_perception/object_markers')
     cropped_pc_pub_topic = rospy.get_param('~cropped_pc_pub_topic', '/tum_tb_perception/cropped_pc')
 
+    cropped_pc_label = rospy.get_param('~cropped_pc_label', 'taskboard')
+
     debug = rospy.get_param('~debug', False)
     save_output = rospy.get_param('~save_output', False)
 
@@ -260,7 +263,7 @@ if __name__ == '__main__':
                     object_positions_dict, object_points_dict, cropped_pc_points_array = \
                             position_estimator.estimate_object_positions(
                                     bbox_dict_list, pc_point_list, 
-                                    cropped_pc_label='taskboard', 
+                                    cropped_pc_label=cropped_pc_label, 
                                     debug=debug
                     )
                     tb_points_array = object_points_dict['taskboard']
@@ -305,7 +308,12 @@ if __name__ == '__main__':
                     # Optionally save results: taskboard points and object positions dict.
                     # Mostly for testing and debugging.
                     if save_output:
-                        rospy.loginfo(f'[pose_estimator] Saving output data...')
+                        output_sub_dir_path = 'pose_estimator_output_' + \
+                                              datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                        output_dir_path = os.path.join(output_dir_path, output_sub_dir_path)
+                        rospy.loginfo(f'[pose_estimator] Saving output data in ' + \
+                                      f'{output_dir_path}')
+
                         if not os.path.isdir(output_dir_path):
                             rospy.loginfo(f'[pose_estimator] Output directory'
                                           f' {output_dir_path} does not exist!'
@@ -325,8 +333,10 @@ if __name__ == '__main__':
                     ## Parameters and Variables:
                     ## ----------------------------------------
 
-                    parameters = {'arrow_scale_factor': 0.2, 
-                                  'plot_fitted_rectangle': True, 
+                    # parameters = {'arrow_scale_factor': 0.2, 
+                                  # 'plot_fitted_rectangle': True, 
+                    parameters = {'arrow_scale_factor': 0.1, 
+                                  'plot_fitted_rectangle': False, 
                                   'plot_fitted_rectified_rectangle': True, 
                                   'hide_pc_points': False}
 
@@ -339,6 +349,7 @@ if __name__ == '__main__':
                                 horizontal_side_found = position_estimator.estimate_tb_orientation(tb_points_array, 
                                                                                                    object_positions_dict, 
                                                                                                    debug=debug,
+                                                                                                   output_dir_path=output_dir_path if save_output else None,
                                                                                                    **parameters)
 
                         # Compute and normalize orientation quaternion:
