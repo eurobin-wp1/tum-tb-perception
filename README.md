@@ -84,6 +84,16 @@ In order to estimate the task board orientation, we find a coordinate frame whos
   * finding the corresponding corners of the task board
   * setting the directions of `x` and `y` such that they point towards the two right-side corners and the top-side corners, respectively.
 
+The following images demonstrate the results of each stage of orientation estimation:
+<p float="left" align="center">
+  <img src="docs/images/sample_pose_estimator_debug_output/debug_original_point_cloud.png" width="45%" />
+  <img src="docs/images/sample_pose_estimator_debug_output/debug_cropped_point_cloud.png" width="45%" /> 
+</p>
+<p float="left" align="center">
+  <img src="docs/images/sample_pose_estimator_debug_output/debug_cropped_point_cloud_fitted_rectangle.png" width="45%" />
+  <img src="docs/images/sample_pose_estimator_debug_output/debug_identified_corners_and_orientation.png" width="45%" /> 
+</p>
+
 ### Slider Task Solver
 
 The `slider_task_solver_node` runs continuously; for each received trigger message, it:
