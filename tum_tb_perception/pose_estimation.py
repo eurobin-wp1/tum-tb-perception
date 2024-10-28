@@ -333,7 +333,8 @@ class TaskboardPoseEstimator(PositionEstimator):
 
         return points_array
 
-    def estimate_tb_orientation(self, tb_points_array, object_positions_dict, debug=False, **kwargs):
+    def estimate_tb_orientation(self, tb_points_array, object_positions_dict, debug=False, 
+                                output_dir_path=None, **kwargs):
         """
         Implements an algorithm that estimates the orientation of the taskboard, given
         point cloud that have been classified according to the taskboard classes.
@@ -362,6 +363,8 @@ class TaskboardPoseEstimator(PositionEstimator):
             Mapping between labels and estimated 3D positions (np.ndarrays)
         debug: bool
             Whether to print debugging messages and visualize results in 3D plots
+        output_dir_path: str
+            Output directory (to save debug visualization images in)
 
         Returns
         -------
@@ -544,14 +547,14 @@ class TaskboardPoseEstimator(PositionEstimator):
             ax.scatter(self.cropped_pc_points_array[:, 0], self.cropped_pc_points_array[:, 1],
                        self.cropped_pc_points_array[:, 2],
                        label='Original', c='tab:blue', s=0.01, alpha=1.0)
-            # ax.legend()
+
             ax.set_xlabel('$x$'); ax.set_ylabel('$y$'); ax.set_zlabel('$z$')
             xlims, ylims, zlims  = ax.get_xlim(), ax.get_ylim(), ax.get_zlim()
-            # ax.set_title('Raw Point Cloud', y=1.08, fontsize=15)
             ax.set_title('Raw Pointcloud', y=0.98, fontsize=20)
             ax.view_init(-92, -86)
             fig.tight_layout()
-            fig.savefig('/tmp/original_point_cloud.png', dpi=200)
+            if output_dir_path is not None:
+                fig.savefig(os.path.join(output_dir_path, 'debug_original_point_cloud.png'), dpi=200)
 
             fig = plt.figure('Filtered Point Cloud Data')
             ax = fig.add_subplot(projection='3d')
@@ -563,7 +566,8 @@ class TaskboardPoseEstimator(PositionEstimator):
             ax.set_title('Filtered Pointcloud', y=0.98, fontsize=20)
             ax.view_init(-92, -86)
             fig.tight_layout()
-            fig.savefig('/tmp/cropped_point_cloud.png', dpi=200)
+            if output_dir_path is not None:
+                fig.savefig(os.path.join(output_dir_path, 'debug_cropped_point_cloud.png'), dpi=200)
 
             fig = plt.figure('Taskboard Orientation Estimation Results')
             ax = fig.add_subplot(projection='3d')
@@ -571,7 +575,6 @@ class TaskboardPoseEstimator(PositionEstimator):
             if not kwargs['hide_pc_points']:
                 ax.scatter(tb_points_array[:, 0], tb_points_array[:, 1], tb_points_array[:, 2],
                         label='Points', c='tab:blue', s=0.01, alpha=0.2)
-                           # label='Points', c='black', s=0.01, alpha=0.2)
 
             # Best-fit plane's normal vector:
             end_point = plane_normal_eigenvector * kwargs['arrow_scale_factor']
@@ -582,16 +585,15 @@ class TaskboardPoseEstimator(PositionEstimator):
                           textcoords='offset points',
                           ha='left', va='bottom')
 
-            # ax.legend(prop={'size': 7}, bbox_to_anchor=(1.03, 1.0))
             ax.set_xlabel('$x$'), ax.set_ylabel('$y$'), ax.set_zlabel('$z$')
             ax.set_xlim(np.array(xlims) * 1.0)
             ax.set_ylim(np.array(ylims) * 1.0)
             ax.set_zlim(np.array(zlims) * 1.0)
-            # ax.view_init(-92, -86)
             ax.view_init(-177, -87)
             ax.set_title('Best-fit Plane Normal Vector', y=0.98, fontsize=20)
             fig.tight_layout()
-            fig.savefig('/tmp/cropped_point_cloud_normal_vector.png', dpi=200)
+            if output_dir_path is not None:
+                fig.savefig(os.path.join(output_dir_path, 'debug_cropped_point_cloud_normal_vector.png'), dpi=200)
 
             # Visualize best-fit plane representation:
             plane_bounds = list(zip(tb_points_array.min(axis=(0))[:2],
@@ -603,7 +605,6 @@ class TaskboardPoseEstimator(PositionEstimator):
             zz = (-(A * xx) - (B * yy) - D) / C
             ax.plot_surface(xx, yy, zz, alpha=0.3, facecolor='grey',
                             color='tab:blue', cstride=3, rstride=3,)
-                            # color='black', cstride=3, rstride=3,)
             ax.annotate3D('Best-fit Plane',
                           xyz=(plane_bounds[0][1], plane_bounds[1][1], zz.max()),
                           xytext=(0., 0.), textcoords='offset points',
@@ -612,7 +613,8 @@ class TaskboardPoseEstimator(PositionEstimator):
             ax.view_init(-177, -87)
             ax.set_title('Best-fit Plane', y=0.98, fontsize=20)
             fig.tight_layout()
-            plt.savefig('/tmp/cropped_point_cloud_best_fit_plane_and_normal.png', dpi=200)
+            if output_dir_path is not None:
+                fig.savefig(os.path.join(output_dir_path, 'debug_cropped_point_cloud_best_fit_plane_and_normal.png'), dpi=200)
 
             # Visualized fitted and rectified 2D rectangles:
             if kwargs['plot_fitted_rectangle']:
@@ -622,7 +624,6 @@ class TaskboardPoseEstimator(PositionEstimator):
                                           np.ones((rect_corners_aug.shape[0], 1)) * tb_position[2]))
                 ax.plot(rect_corners_aug[:, 0], rect_corners_aug[:, 1], rect_corners_aug[:, 2],
                         color='tab:blue', label='Best-Fit Rectangle (Naive)')
-                         # color='black', label='Best-Fit Rectangle (Naive)')
 
             if kwargs['plot_fitted_rectified_rectangle']:
                 rect_corners_aug = np.vstack((rect_rectified_corners, rect_rectified_corners[0, :]))
@@ -637,7 +638,6 @@ class TaskboardPoseEstimator(PositionEstimator):
             ax2 = fig2.add_subplot(projection='3d')
             ax2.scatter(tb_points_array[:, 0], tb_points_array[:, 1], tb_points_array[:, 2],
                         label='Points', c='tab:blue', s=0.01, alpha=0.2)
-                       # label='Points', c='black', s=0.01, alpha=0.2)
             ax2.arrow3D(*tb_position, *end_point, mutation_scale=10)
             ax2.annotate3D('Plane Normal',
                           xyz=end_point + tb_position + (kwargs['arrow_scale_factor'] * .0),
@@ -656,13 +656,14 @@ class TaskboardPoseEstimator(PositionEstimator):
                           xyz=rect_corners_aug[1, :],
                           xytext=(0., 0.), textcoords='offset points',
                           ha='left', va='bottom')
+
             ax2.set_xlabel('$x$'); ax2.set_ylabel('$y$'); ax2.set_zlabel('$z$')
             ax2.set_xlim(np.array(xlims) * 1.0), ax2.set_ylim(np.array(ylims) * 1.0), ax2.set_zlim(np.array(zlims) * 1.0)
-            # ax.view_init(-177, -87)
             ax2.view_init(-163, -87)
             ax2.set_title('Minimum Bounding Rectangle', y=0.98, fontsize=20)
             fig2.tight_layout()
-            fig2.savefig('/tmp/cropped_point_cloud_fitted_rectangle.png', dpi=200)
+            if output_dir_path is not None:
+                fig2.savefig(os.path.join(output_dir_path, 'debug_cropped_point_cloud_fitted_rectangle.png'), dpi=200)
 
             # Annotate quadrant points:
             for corner_id, quadrant_id in corner_quadrant_ids.items():
@@ -733,17 +734,11 @@ class TaskboardPoseEstimator(PositionEstimator):
                            c=[np.array(self.class_colors_dict[object_id]) / 255.],
                            label='Object: {}'.format(object_id))
 
-            # ax.legend(prop={'size': 7}, bbox_to_anchor=(1.03, 1.0))
-            # ax.set_xlabel('$x$'), ax.set_ylabel('$y$'), ax.set_zlabel('$z$')
-            # ax.set_xlim(np.array(xlims) * 1.0)
-            # ax.set_ylim(np.array(ylims) * 1.0)
-            # ax.set_zlim(np.array(zlims) * 1.0)
-            # ax.view_init(-92, -86)
-
             ax.view_init(-92, -86)
             ax.set_title('Identified Corners', y=0.98, fontsize=20)
             fig.tight_layout()
-            fig.savefig('/tmp/identified_corners_and_orientation.png', dpi=200)
+            if output_dir_path is not None:
+                fig.savefig(os.path.join(output_dir_path, 'debug_identified_corners_and_orientation.png'), dpi=200)
 
             plt.show()
     
