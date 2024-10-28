@@ -114,10 +114,10 @@ def annotate_image(image, bboxes, class_colors_dict, target_bboxes=None,
                                         color=color, thickness=2)
 
         # Construct label text:
-        confidence = bbox['confidence']
+        confidence = float(bbox['confidence'])
         label_str = label
         if confidence is not None:
-            label_str += ': {:.2f}%'.format(float(confidence))
+            label_str += ': {:d}%'.format(int(confidence * 100.))
 
         # Estimate area of label box:
         (w, h), _ = cv2.getTextSize(label_str, cv2_bbox_font_,
