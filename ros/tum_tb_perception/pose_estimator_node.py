@@ -332,7 +332,7 @@ class PoseEstimatorNode(Node):
                         object_positions_dict, object_points_dict, cropped_pc_points_array = \
                             self.position_estimator.estimate_object_positions(
                                     bbox_dict_list, pc_point_list, 
-                                    cropped_pc_label=cropped_pc_label, 
+                                    cropped_pc_label=self.cropped_pc_label, 
                                     debug=self.debug
                         )
                         tb_points_array = object_points_dict['taskboard']
