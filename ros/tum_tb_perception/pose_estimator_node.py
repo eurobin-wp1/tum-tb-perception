@@ -17,6 +17,7 @@ import time
 import copy
 import pickle
 import socket
+import datetime
 
 import rclpy
 import tf2_ros
@@ -154,14 +155,14 @@ class PoseEstimatorNode(Node):
         if self.save_output:
             output_sub_dir_path = 'pose_estimator_output_' + \
                                   datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_dir_path = os.path.join(self.output_dir_path, output_sub_dir_path)
+            self.output_dir_path = os.path.join(self.output_dir_path, output_sub_dir_path)
             self.get_logger().info(f'Saving output data in ' + \
-                                   f'{output_dir_path}')
+                                   f'{self.output_dir_path}')
 
-            if not os.path.isdir(output_dir_path):
+            if not os.path.isdir(self.output_dir_path):
                 self.get_logger().info(f'Output directory does not exist! ' + \
                                        f'Creating now...')
-                os.makedirs(output_dir_path)
+                os.makedirs(self.output_dir_path)
 
         # Currently unused:
         # self.current_time = time.time()
@@ -381,11 +382,6 @@ class PoseEstimatorNode(Node):
                         # Mostly for testing and debugging.
                         if self.save_output:
                             self.get_logger().info(f'Saving output data...')
-                            if not os.path.isdir(self.output_dir_path):
-                                self.get_logger().info(f'Output directory ' + \
-                                                       f'{output_dir_path} does not exist! ' + \
-                                                       f'Creating now...')
-                                os.makedirs(self.output_dir_path)
 
                             with open(os.path.join(self.output_dir_path, 'pose_estimator_object_positions_dict.pkl'), 'wb') as handle:
                                 pickle.dump(object_positions_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
@@ -414,6 +410,7 @@ class PoseEstimatorNode(Node):
                                 horizontal_side_found = self.position_estimator.estimate_tb_orientation(tb_points_array, 
                                                                                                        object_positions_dict, 
                                                                                                        debug=self.debug,
+                                                                                                       output_dir_path=self.output_dir_path if self.save_output else None,
                                                                                                        **parameters)
 
                             # Compute and normalize orientation quaternion:
