@@ -586,9 +586,7 @@ class TaskboardPoseEstimator(PositionEstimator):
                           ha='left', va='bottom')
 
             ax.set_xlabel('$x$'), ax.set_ylabel('$y$'), ax.set_zlabel('$z$')
-            ax.set_xlim(np.array(xlims) * 1.0)
-            ax.set_ylim(np.array(ylims) * 1.0)
-            ax.set_zlim(np.array(zlims) * 1.0)
+            ax.set_xlim(np.array(xlims) * 1.0), ax.set_ylim(np.array(ylims) * 1.0), ax.set_zlim(np.array(zlims) * 1.0)
             ax.view_init(-177, -87)
             ax.set_title('Best-fit Plane Normal Vector', y=0.98, fontsize=20)
             fig.tight_layout()
