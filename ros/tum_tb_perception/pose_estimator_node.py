@@ -431,7 +431,7 @@ class PoseEstimatorNode(Node):
                             break
 
                         else:
-                            self.get_logger().info(f'Failed to estimate TB orientation after {num_retries} attempts.')
+                            self.get_logger().info(f'Failed to estimate TB orientation after {self.num_retries} attempts.')
                             self.current_detection_msg = None
                             continue
 
