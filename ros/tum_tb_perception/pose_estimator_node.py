@@ -333,7 +333,12 @@ class PoseEstimatorNode(Node):
                                     cropped_pc_label='taskboard', 
                                     debug=self.debug
                         )
-                        tb_points_array = object_points_dict['taskboard']
+                        try:
+                            tb_points_array = object_points_dict['taskboard']
+                        except KeyError:
+                            self.get_logger().info(f'TB position was not found! Skipping orientation estimation...')
+                            self.current_detection_msg = None
+                            continue
 
                         ## ----------------------------------------
                         ## Publishing Results:
