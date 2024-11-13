@@ -57,6 +57,7 @@ class ImageDetector(object):
         self.model = get_tb_cnn_model(self.num_classes)
         self.model.load_state_dict(torch.load(self.model_weights_file_path, 
                                               map_location=self.device))
+        self.model.to(self.device)
         self.model.eval()
 
     def detect_objects(self, image_cv, return_annotated_image=True):

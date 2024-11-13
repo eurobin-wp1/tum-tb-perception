@@ -107,6 +107,8 @@ if __name__ == '__main__':
     if device == 'gpu' and not torch.cuda.is_available():
         rospy.logerr('[cnn_detector] Could not detect gpu device! Terminating.')
         sys.exit(1)
+    if device == 'gpu':
+        device = 'cuda:0' # 'gpu' is invalid as torch device. Take first available GPU.
 
     # Verify trigger setting (ROS OR UDP):
     if run_on_ros_trigger and run_on_udp_trigger:
