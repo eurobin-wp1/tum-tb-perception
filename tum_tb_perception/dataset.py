@@ -204,7 +204,6 @@ class TaskboardDataset(torch.utils.data.Dataset):
         self.labels = []
 
         self.load_img_and_label_filenames()
-        self.load_labels()
         self.gt_labels_list = load_labels(os.path.join(self.root, 'labels.txt'))
         self.num_classes = len(self.gt_labels_list)
 
