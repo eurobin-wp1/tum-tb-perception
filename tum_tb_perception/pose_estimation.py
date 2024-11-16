@@ -146,8 +146,11 @@ class PositionEstimator(object):
         object_points_dict = self.convert_object_points_to_arrays(object_points_dict)
 
         if debug:
-            # Copy unfiltered taskboard data for later visualizations:
-            cropped_pc_points_array = object_points_dict[cropped_pc_label].copy()
+            try:
+                # Copy unfiltered taskboard data for later visualizations:
+                cropped_pc_points_array = object_points_dict[cropped_pc_label].copy()
+            except KeyError:
+                cropped_pc_points_array = None
         else:
             cropped_pc_points_array = None
 
