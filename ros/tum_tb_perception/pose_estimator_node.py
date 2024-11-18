@@ -515,14 +515,21 @@ class PoseEstimatorNode(Node):
                             point_msg = tf2_geometry_msgs.PointStamped(point=Point(**dict(zip(['x', 'y', 'z'], 
                                                                                               [float(value) for value in point]))))
                             point_msg.header.frame_id = self.current_camera_info_msg.header.frame_id
-                            point_msg = self.tf_buffer.transform(point_msg, self.desired_reference_frame, rclpy.duration.Duration(seconds=1.0))
+                            try:
+                                point_msg = self.tf_buffer.transform(point_msg, self.desired_reference_frame, rclpy.duration.Duration(seconds=1.0))
+                            except (tf2_ros.LookupException, tf2_ros.ConnectivityException) as e:
+                                self.get_logger().info(f'Failed to transform points from {self.current_camera_info_msg.header.frame_id}' + \
+                                                       f' to {self.desired_reference_frame}.')
+                                self.get_logger().info(f'Error: {e}')
+                                self.get_logger().info(f'Skipping pose estimation...')
+                                self.current_detection_msg = None
+                                continue
 
                             tf_vertex_point_list.append([point_msg.point.x, point_msg.point.y, point_msg.point.z])
 
                         marker_msg, text_marker_msg = self.get_rectangle_markers(
                                     tf_vertex_point_list,
                                     frame_id=self.desired_reference_frame,
-                                    label=object_msg.label,
                                     color_value=(250, 0, 0)
                         )
                         marker_array_msg.markers.append(marker_msg)
