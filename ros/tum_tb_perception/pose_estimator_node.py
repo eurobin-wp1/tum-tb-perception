@@ -25,6 +25,8 @@ import numpy as np
 # import sensor_msgs.point_cloud2 as pc2
 # Note: current ROS2 port of point_cloud2:
 import sensor_msgs_py.point_cloud2 as pc2
+# Note: needed for tf2_ros transform functions to work:
+import tf2_geometry_msgs
 
 from rclpy import Parameter
 from rclpy.node import Node
@@ -59,6 +61,7 @@ class PoseEstimatorNode(Node):
             os.path.join(self.pkg_share_path, 'config/class_colors_taskboard.yaml'))
         self.declare_parameter('output_dir_path', '/tmp')
         self.declare_parameter('taskboard_frame_name', 'taskboard_frame')
+        self.declare_parameter('desired_reference_frame', 'base')
         self.declare_parameter('num_retries', 3)
         self.declare_parameter('udp_ip', 'localhost')
         self.declare_parameter('udp_output_port', 6000)
@@ -78,6 +81,7 @@ class PoseEstimatorNode(Node):
         self.class_colors_file_path = self.get_parameter('class_colors_file_path').value
         self.output_dir_path = self.get_parameter('output_dir_path').value
         self.taskboard_frame_name = self.get_parameter('taskboard_frame_name').value
+        self.desired_reference_frame = self.get_parameter('desired_reference_frame').value
         self.num_retries = self.get_parameter('num_retries').value
         self.udp_ip = self.get_parameter('udp_ip').value
         self.udp_output_port = self.get_parameter('udp_output_port').value
@@ -131,6 +135,8 @@ class PoseEstimatorNode(Node):
 
     def initialize(self):
         self.tf_broadcaster = tf2_ros.TransformBroadcaster(self)
+        self.tf_buffer = tf2_ros.Buffer()
+        self.tf_listener = tf2_ros.transform_listener.TransformListener(self.tf_buffer, self)
 
         ## ----------------------------------------------------------------------
         ## UDP Initializations
@@ -351,16 +357,23 @@ class PoseEstimatorNode(Node):
                         marker_array_msg = MarkerArray()
 
                         for label, object_position in object_positions_dict.items():
-                            # Note: ROS2 geometry_msgs/Point accepts only floats, not numpy.float64, hence the cast:
-                            object_msg = Object(label=label, pose=Pose(position=Point(**dict(zip(['x', 'y', 'z'], 
-                                                                                                 [float(value) for value in object_position]))), 
+                            # Transform points to desired frame first:
+                            point_msg = tf2_geometry_msgs.PointStamped(point=Point(**dict(zip(['x', 'y', 'z'], 
+                                                                                              [float(value) for value in object_position]))))
+                            point_msg.header.frame_id = self.current_camera_info_msg.header.frame_id
+                            point_msg = self.tf_buffer.transform(point_msg, self.desired_reference_frame, rclpy.duration.Duration(seconds=1.0))
+
+                            # Create Object message:
+                            object_msg = Object(label=label, pose=Pose(position=point_msg.point, 
                                                                        orientation=Quaternion(**dict(zip(['x', 'y', 'z', 'w'], (0., 0., 0., 1.))))))
-                            object_msg.header.frame_id = self.current_camera_info_msg.header.frame_id
+                            object_msg.header = point_msg.header
                             object_list_msg.objects.append(object_msg)
 
+                            # Create RViz marker messages:
+                            object_position = [point_msg.point.x, point_msg.point.y, point_msg.point.z]
                             marker_msg, text_marker_msg = self.get_point_markers(
                                         object_position,
-                                        frame_id=self.current_camera_info_msg.header.frame_id,
+                                        frame_id=self.desired_reference_frame,
                                         label=object_msg.label,
                                         color_value=self.class_colors_dict[object_msg.label]
                             )
@@ -445,24 +458,30 @@ class PoseEstimatorNode(Node):
                     else:
                         self.get_logger().info(f'Could not get a pointcloud message from topic {pointcloud_topic}! ' + \
                                                f'Skipping pose estimation for this detection result...')
+
                     self.current_detection_msg = None
 
                     if object_list_msg is not None:
                         if orientation_quaternion is not None:
-                            # Broadcast estimated taskboard frame:
-                            # tb_quaternion = Quaternion(*orientation_quaternion)
+                            # Create TB quaternion:
                             tb_quaternion = Quaternion(**dict(zip(['x', 'y', 'z', 'w'], 
                                                                   [float(value) for value in orientation_quaternion])))
 
+                            # Transform TB pose to desired frame:
+                            pose_msg = tf2_geometry_msgs.PoseStamped(pose=Pose(position=Point(**dict(zip(['x', 'y', 'z'], 
+                                                                                                    [float(value) for value in object_positions_dict['taskboard']]))), 
+                                                                          orientation=tb_quaternion))
+                            pose_msg.header.frame_id = self.current_camera_info_msg.header.frame_id
+                            pose_msg = self.tf_buffer.transform(pose_msg, self.desired_reference_frame)
+                            tb_quaternion = pose_msg.pose.orientation
+
+                            # Broadcast estimated taskboard frame TF:
                             tf_msg = TransformStamped()
-                            ## TODO: Verify ROS2 alternative:
-                            tf_msg.header.stamp = self.get_clock().now().to_msg()
-                            tf_msg.header.frame_id = self.current_camera_info_msg.header.frame_id
-                            # tf_msg.header.frame_id = 'camera_depth_optical_frame'
+                            tf_msg.header = pose_msg.header
                             tf_msg.child_frame_id = self.taskboard_frame_name
                             tf_msg.transform.translation = Vector3(**dict(zip(['x', 'y', 'z'], 
-                                                                              [float(value) for value in object_positions_dict['taskboard']])))
-                            tf_msg.transform.rotation = tb_quaternion
+                                                                              [pose_msg.pose.position.x, pose_msg.pose.position.y, pose_msg.pose.position.z])))
+                            tf_msg.transform.rotation = pose_msg.pose.orientation
                             self.tf_broadcaster.sendTransform(tf_msg)
 
                             # TODO: Create TF to visualize taskboard_frame wrt dummy_link:
@@ -492,10 +511,8 @@ class PoseEstimatorNode(Node):
                                 updated_object_list_msg.objects.append(object_msg)
 
                                 tf_msg = TransformStamped()
-                                ## TODO: Verify ROS2 alternative:
                                 tf_msg.header.stamp = self.get_clock().now().to_msg()
-                                tf_msg.header.frame_id = self.current_camera_info_msg.header.frame_id
-                                # tf_msg.header.frame_id = 'camera_depth_optical_frame'
+                                tf_msg.header.frame_id = self.desired_reference_frame
                                 tf_msg.child_frame_id = label + '_frame'
                                 tf_msg.transform.translation = Vector3(**dict(zip(['x', 'y', 'z'], 
                                                                                   [float(object_msg.pose.position.x), 
