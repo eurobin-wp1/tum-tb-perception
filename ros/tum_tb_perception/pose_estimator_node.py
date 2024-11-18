@@ -562,15 +562,10 @@ class PoseEstimatorNode(Node):
                             tf_msg.transform.rotation = pose_msg.pose.orientation
                             self.tf_broadcaster.sendTransform(tf_msg)
 
-                            # TODO: Create TF to visualize taskboard_frame wrt dummy_link:
-                            # tf_msg_test = TransformStamped()
-
                             # Re-publish objects list after adding orientations, and broadcast a frame for each:
                             updated_object_list_msg = ObjectList()
 
                             detected_objects_list = [object_msg.label for object_msg in object_list_msg.objects]
-                            self.get_logger().info(f'[DEBUG] detected_objects_list: \n{detected_objects_list}')
-                            self.get_logger().info(f'[DEBUG] self.labels_list: \n{self.labels_list}')
 
                             # Purge undetected objects from TF tree (RViz visualization):
                             for label in self.labels_list:
