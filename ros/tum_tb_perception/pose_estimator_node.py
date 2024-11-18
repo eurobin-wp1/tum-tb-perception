@@ -411,29 +411,38 @@ class PoseEstimatorNode(Node):
                         object_list_msg = ObjectList()
                         marker_array_msg = MarkerArray()
 
-                        for label, object_position in object_positions_dict.items():
-                            # Transform points to desired frame first:
-                            point_msg = tf2_geometry_msgs.PointStamped(point=Point(**dict(zip(['x', 'y', 'z'], 
-                                                                                              [float(value) for value in object_position]))))
-                            point_msg.header.frame_id = self.current_camera_info_msg.header.frame_id
-                            point_msg = self.tf_buffer.transform(point_msg, self.desired_reference_frame, rclpy.duration.Duration(seconds=1.0))
+                        try:
+                            for label, object_position in object_positions_dict.items():
+                                # Transform points to desired frame first:
+                                point_msg = tf2_geometry_msgs.PointStamped(point=Point(**dict(zip(['x', 'y', 'z'], 
+                                                                                                  [float(value) for value in object_position]))))
+                                point_msg.header.frame_id = self.current_camera_info_msg.header.frame_id
+                                point_msg = self.tf_buffer.transform(point_msg, self.desired_reference_frame, rclpy.duration.Duration(seconds=1.0))
 
-                            # Create Object message:
-                            object_msg = Object(label=label, pose=Pose(position=point_msg.point, 
-                                                                       orientation=Quaternion(**dict(zip(['x', 'y', 'z', 'w'], (0., 0., 0., 1.))))))
-                            object_msg.header = point_msg.header
-                            object_list_msg.objects.append(object_msg)
+                                # Create Object message:
+                                object_msg = Object(label=label, pose=Pose(position=point_msg.point, 
+                                                                           orientation=Quaternion(**dict(zip(['x', 'y', 'z', 'w'], (0., 0., 0., 1.))))))
+                                object_msg.header = point_msg.header
+                                object_list_msg.objects.append(object_msg)
 
-                            # Create RViz marker messages:
-                            object_position = [point_msg.point.x, point_msg.point.y, point_msg.point.z]
-                            marker_msg, text_marker_msg = self.get_point_markers(
-                                        object_position,
-                                        frame_id=self.desired_reference_frame,
-                                        label=object_msg.label,
-                                        color_value=self.class_colors_dict[object_msg.label]
-                            )
-                            marker_array_msg.markers.append(marker_msg)
-                            marker_array_msg.markers.append(text_marker_msg)
+                                # Create RViz marker messages:
+                                object_position = [point_msg.point.x, point_msg.point.y, point_msg.point.z]
+                                marker_msg, text_marker_msg = self.get_point_markers(
+                                            object_position,
+                                            frame_id=self.desired_reference_frame,
+                                            label=object_msg.label,
+                                            color_value=self.class_colors_dict[object_msg.label]
+                                )
+                                marker_array_msg.markers.append(marker_msg)
+                                marker_array_msg.markers.append(text_marker_msg)
+
+                        except (tf2_ros.LookupException, tf2_ros.ConnectivityException) as e:
+                            self.get_logger().info(f'Failed to transform points from {self.current_camera_info_msg.header.frame_id}' + \
+                                                   f' to {self.desired_reference_frame}.')
+                            self.get_logger().info(f'Error: {e}')
+                            self.get_logger().info(f'Skipping pose estimation...')
+                            self.current_detection_msg = None
+                            continue
 
                         self.object_positions_publisher.publish(object_list_msg)
                         self.object_marker_publisher.publish(marker_array_msg)
@@ -511,21 +520,22 @@ class PoseEstimatorNode(Node):
                         # Publish a rectangular RViz marker representing the TB face:
                         # Transform rectangle vertices to desired frame:
                         tf_vertex_point_list = []
-                        for point in tb_corner_points_list.tolist():
-                            point_msg = tf2_geometry_msgs.PointStamped(point=Point(**dict(zip(['x', 'y', 'z'], 
-                                                                                              [float(value) for value in point]))))
-                            point_msg.header.frame_id = self.current_camera_info_msg.header.frame_id
-                            try:
+                        try:
+                            for point in tb_corner_points_list.tolist():
+                                point_msg = tf2_geometry_msgs.PointStamped(point=Point(**dict(zip(['x', 'y', 'z'], 
+                                                                                                  [float(value) for value in point]))))
+                                point_msg.header.frame_id = self.current_camera_info_msg.header.frame_id
                                 point_msg = self.tf_buffer.transform(point_msg, self.desired_reference_frame, rclpy.duration.Duration(seconds=1.0))
-                            except (tf2_ros.LookupException, tf2_ros.ConnectivityException) as e:
-                                self.get_logger().info(f'Failed to transform points from {self.current_camera_info_msg.header.frame_id}' + \
-                                                       f' to {self.desired_reference_frame}.')
-                                self.get_logger().info(f'Error: {e}')
-                                self.get_logger().info(f'Skipping pose estimation...')
-                                self.current_detection_msg = None
-                                continue
 
-                            tf_vertex_point_list.append([point_msg.point.x, point_msg.point.y, point_msg.point.z])
+                                tf_vertex_point_list.append([point_msg.point.x, point_msg.point.y, point_msg.point.z])
+
+                        except (tf2_ros.LookupException, tf2_ros.ConnectivityException) as e:
+                            self.get_logger().info(f'Failed to transform points from {self.current_camera_info_msg.header.frame_id}' + \
+                                                   f' to {self.desired_reference_frame}.')
+                            self.get_logger().info(f'Error: {e}')
+                            self.get_logger().info(f'Skipping pose estimation...')
+                            self.current_detection_msg = None
+                            continue
 
                         marker_msg, text_marker_msg = self.get_rectangle_markers(
                                     tf_vertex_point_list,
@@ -557,7 +567,16 @@ class PoseEstimatorNode(Node):
                                                                                                     [float(value) for value in object_positions_dict['taskboard']]))), 
                                                                           orientation=tb_quaternion))
                             pose_msg.header.frame_id = self.current_camera_info_msg.header.frame_id
-                            pose_msg = self.tf_buffer.transform(pose_msg, self.desired_reference_frame)
+                            try:
+                                pose_msg = self.tf_buffer.transform(pose_msg, self.desired_reference_frame)
+                            except (tf2_ros.LookupException, tf2_ros.ConnectivityException) as e:
+                                self.get_logger().info(f'Failed to transform points from {self.current_camera_info_msg.header.frame_id}' + \
+                                                       f' to {self.desired_reference_frame}.')
+                                self.get_logger().info(f'Error: {e}')
+                                self.get_logger().info(f'Skipping pose estimation...')
+                                self.current_detection_msg = None
+                                continue
+
                             tb_quaternion = pose_msg.pose.orientation
 
                             # Broadcast estimated taskboard frame TF:
