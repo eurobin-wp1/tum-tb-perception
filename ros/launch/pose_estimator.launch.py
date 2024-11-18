@@ -25,6 +25,11 @@ def generate_launch_description():
         default_value='taskboard_frame',
         description='TODO'
     )
+    desired_reference_frame_launch_arg = DeclareLaunchArgument(
+        'desired_reference_frame', 
+        default_value='base',
+        description='TODO'
+    )
     num_retries_launch_arg = DeclareLaunchArgument(
         'num_retries', 
         default_value='3',
@@ -113,6 +118,7 @@ def generate_launch_description():
             {'class_colors_file_path': LaunchConfiguration('class_colors_file_path')},
             {'output_dir_path': LaunchConfiguration('output_dir_path')},
             {'taskboard_frame_name': LaunchConfiguration('taskboard_frame_name')},
+            {'desired_reference_frame': LaunchConfiguration('desired_reference_frame')},
             {'num_retries': LaunchConfiguration('num_retries')},
             {'udp_ip': LaunchConfiguration('udp_ip')},
             {'udp_output_port': LaunchConfiguration('udp_output_port')},
@@ -135,6 +141,7 @@ def generate_launch_description():
         class_colors_file_path_launch_arg,
         output_dir_path_launch_arg,
         taskboard_frame_name_launch_arg,
+        desired_reference_frame_launch_arg,
         num_retries_launch_arg,
         udp_ip_launch_arg,
         udp_output_port_launch_arg,
