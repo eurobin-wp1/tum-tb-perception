@@ -282,6 +282,61 @@ class PoseEstimatorNode(Node):
 
         return marker_msg, text_marker_msg
 
+    def get_rectangle_markers(self, vertex_point_list, frame_id, 
+                              label='', color_value=(0., 0., 0.)):
+        """
+        Creates RViz position and text markers for a rectangle from the
+        given vertex point list.
+        Note: the vertex list should contain a repeat of the first point
+        as the last point, in order to close the rectangle.
+
+        Parameters
+        ----------
+        vertex_point_list: List
+            3D position coordinates of rectangle vertices (lists)
+        frame_id: str
+            Name of given point's coordinate frame
+        label: str
+            Text with which the point will be labeled
+        color_value: tuple
+           (R, G, B) values for the point and text markers [0., 255.] 
+
+        Returns
+        -------
+        marker_msg: visualization_msgs.Marker 
+            Point visualization marker ROS message
+        text_marker_msg: visualization_msgs.Marker 
+            Text visualization marker ROS message
+        """
+        marker_msg = Marker()
+        marker_msg.header.frame_id = frame_id
+        marker_msg.id = self.object_marker_id
+        marker_msg.type = 4                                       # Line Strip
+        marker_msg.action = 0                                     # Add/modify
+        for point in vertex_point_list:
+            marker_msg.points.append(Point(**dict(zip(['x', 'y', 'z'], 
+                                                      [float(value) for value in point]))))
+
+        marker_msg.scale.x = 0.005
+        marker_msg.scale.y = 0.005
+        marker_msg.scale.z = 0.005
+        marker_msg.color.r = color_value[0] / 255.
+        marker_msg.color.g = color_value[1] / 255.
+        marker_msg.color.b = color_value[2] / 255.
+        marker_msg.color.a = 1.0
+        self.object_marker_id += 1
+
+        text_marker_msg = copy.deepcopy(marker_msg)
+        text_marker_msg.id = self.object_marker_id
+        text_marker_msg.type = 9                                  # Text-view-facing
+        text_marker_msg.text = label
+        text_marker_msg.pose.position.x = marker_msg.pose.position.x + \
+                                          (0.005 * (len(label) / 2.))
+        text_marker_msg.pose.position.y = marker_msg.pose.position.y - 0.01
+        self.object_marker_id += 1
+
+        return marker_msg, text_marker_msg
+
     def clear_object_markers(self):
         """
         Clears all current RViz object markers.
@@ -425,11 +480,12 @@ class PoseEstimatorNode(Node):
                             tb_orientation_estimation_start_time = time.time()
                             tb_tf_matrix, orientation_estimation_success, \
                                 vertical_side_found, \
-                                horizontal_side_found = self.position_estimator.estimate_tb_orientation(tb_points_array, 
-                                                                                                       object_positions_dict, 
-                                                                                                       debug=self.debug,
-                                                                                                       output_dir_path=self.output_dir_path if self.save_output else None,
-                                                                                                       **parameters)
+                                horizontal_side_found, \
+                                tb_corner_points_list = self.position_estimator.estimate_tb_orientation(tb_points_array, 
+                                                                                                        object_positions_dict, 
+                                                                                                        debug=self.debug,
+                                                                                                        output_dir_path=self.output_dir_path if self.save_output else None,
+                                                                                                        **parameters)
 
                             # Compute and normalize orientation quaternion:
                             if orientation_estimation_success:
@@ -451,6 +507,28 @@ class PoseEstimatorNode(Node):
                             self.get_logger().info(f'Failed to estimate TB orientation after {self.num_retries} attempts.')
                             self.current_detection_msg = None
                             continue
+
+                        # Publish a rectangular RViz marker representing the TB face:
+                        # Transform rectangle vertices to desired frame:
+                        tf_vertex_point_list = []
+                        for point in tb_corner_points_list.tolist():
+                            point_msg = tf2_geometry_msgs.PointStamped(point=Point(**dict(zip(['x', 'y', 'z'], 
+                                                                                              [float(value) for value in point]))))
+                            point_msg.header.frame_id = self.current_camera_info_msg.header.frame_id
+                            point_msg = self.tf_buffer.transform(point_msg, self.desired_reference_frame, rclpy.duration.Duration(seconds=1.0))
+
+                            tf_vertex_point_list.append([point_msg.point.x, point_msg.point.y, point_msg.point.z])
+
+                        marker_msg, text_marker_msg = self.get_rectangle_markers(
+                                    tf_vertex_point_list,
+                                    frame_id=self.desired_reference_frame,
+                                    label=object_msg.label,
+                                    color_value=(250, 0, 0)
+                        )
+                        marker_array_msg.markers.append(marker_msg)
+                        marker_array_msg.markers.append(text_marker_msg)
+
+                        self.object_marker_publisher.publish(marker_array_msg)
 
                         elapsed_time = time.time() - position_estimation_start_time
                         self.get_logger().info(f'Finished in {elapsed_time:.2f}s')
