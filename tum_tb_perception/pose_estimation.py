@@ -514,8 +514,8 @@ class TaskboardPoseEstimator(PositionEstimator):
             print(f'\n[DEBUG] [{self.name}] Orientation vector 1 (unnormalized):\n{orientation_vector_1}')
             print(f'[DEBUG] [{self.name}] Orientation vector 2 (unnormalized):\n{orientation_vector_2}')
 
-        orientation_vectors = np.stack((orientation_vector_1 / np.linalg.norm(orientation_vector_1),
-                                        orientation_vector_2 / np.linalg.norm(orientation_vector_2)))
+        orientation_vectors = np.stack((orientation_vector_2 / np.linalg.norm(orientation_vector_2),
+                                        orientation_vector_1 / np.linalg.norm(orientation_vector_1)))
 
         tb_orientation_matrix = np.vstack((orientation_vectors, plane_normal_eigenvector))
 
