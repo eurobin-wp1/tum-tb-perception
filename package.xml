@@ -22,6 +22,7 @@
   <depend>visualization_msgs</depend>
   <depend>tf2_ros</depend>
   <depend>tf_transformations</depend>
+  <depend>tf2_geometry_msgs</depend>
 
   <!-- Not available: -->
   <!-- <depend>message_runtime</depend> -->
