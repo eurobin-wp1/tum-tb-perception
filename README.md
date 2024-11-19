@@ -326,6 +326,7 @@ For ROS:
 * `geometry_msgs`
 * `std_msgs`
 * `sensor_msgs`
+* `tf2_geometry_msgs`
 * `tf2_ros`
 * `tf_conversions`
 * `visualization_msgs`
