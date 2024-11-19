@@ -339,7 +339,7 @@ For ROS:
 - [ ] Include complete code and instructions for training the detection model.
 - [ ] Implement continuous detection + pose estimation (detection may require GPU).
 - [ ] Implement pose estimation in C++ (if pointcloud processing run-time improves).
-- [ ] Create a ROS2 interface.
+- [X] Create a ROS2 interface.
 
 <!-- TODO: Add references, etc., if any
 ## Credits
