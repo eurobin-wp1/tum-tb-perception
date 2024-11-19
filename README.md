@@ -4,7 +4,7 @@
 
 A ROS package that contains the core perception libraries and tools for the euROBIN task board challenge.
 
-Designed for and tested on Ubuntu 22.04 LTS, ROS Melodic with Python 3.8/3.10, and an Intel Realsense D435i.
+Designed for and tested on Ubuntu 22.04 LTS, ROS Humble with Python 3.8/3.10, and an Intel Realsense D435i.
 
 <b>Note: The package is in an initial development phase. It is unstable and may significantly change in concept and implementation.</b>
   
@@ -109,16 +109,18 @@ The `slider_task_solver_node` runs continuously; for each received trigger messa
 
 ### Install Dependencies
 
-After cloning this repository into your catkin workspace, it is recommended to first install the Python package dependencies using `pip` by running the following within this directory:
+After cloning this repository into your workspace, it is recommended to first install the Python package dependencies using `pip` by running the following within this directory:
 ```
 pip install -r requirements.txt
 ```
+
+Before building, also clone the [tum-tb-perception-msgs](https://github.com/eurobin-wp1/tum-tb-perception-msgs) repository, on which this package depends, into the workspace source directory.
 
 ### Build Package
 
 Build the package using:
 ```
-catkin build tum_tb_perception
+colcon build --packages-select tum_tb_perception
 ```
 
 ### Download Detection Model
@@ -132,28 +134,28 @@ Run the following script from within this directory, which will download the Pyt
 ## Usage
 
 First, ensure that following topics containing the camera sensor data are available (the topic names are configurable in the launch files):
-* `/camera/color/image_raw`: `sensor_msgs/Image` messages containing RGB images
-* `/camera/depth/color/points`: `sensor_msgs/PointCloud2` messages containing point cloud data
-* `/camera/color/camera_info`: `CameraInfo` messages containing the camera's intrinsic parameters.
+* `/camera/camera/color/image_raw`: `sensor_msgs/Image` messages containing RGB images
+* `/camera/camera/depth/color/points`: `sensor_msgs/PointCloud2` messages containing point cloud data
+* `/camera/camera/color/camera_info`: `CameraInfo` messages containing the camera's intrinsic parameters.
 
-In our case, these are obtained from an Intel Realsense D435i camera and by running the official [realsense-ros](https://github.com/IntelRealSense/realsense-ros) launch file:
+In our case, these are obtained from an Intel Realsense D435i camera and by running the official [realsense-ros](https://github.com/IntelRealSense/realsense-ros) launch file with the following parameters:
 ```bash
-roslaunch realsense2_camera rs_camera.launch filters:=pointcloud
+ros2 launch realsense2_camera rs_launch.py rgb_camera.color_profile:=640x480x15 depth_module.depth_profile:=640x480x15 pointcloud.enable:=true
 ```
 
 Start the pose estimator node:
 ```bash
-roslaunch tum_tb_perception pose_estimator.launch
+ros2 launch tum_tb_perception pose_estimator.launch.py
 ```
 
 Start the object detector node:
 ```bash
-roslaunch tum_tb_perception object_detector.launch
+ros2 launch tum_tb_perception object_detector.launch.py run_on_ros_trigger:=true
 ```
 
 Start the slider task solver node:
 ```bash
-roslaunch tum_tb_perception slider_task_solver.launch
+ros2 launch tum_tb_perception slider_task_solver.launch
 ```
 
 Note: the recommended way to run the components is through the launch files, because they ensure the correct configuration of various parameters (config file paths, etc.).
@@ -161,7 +163,7 @@ Note: the recommended way to run the components is through the launch files, bec
 To detect the task board and its components, position the camera above the approximate location of the task board looking down (see, for example, the perspective shown on the illustrative RViz image [above](#example-results)).
 Then, trigger the object detection and subsequent pose estimation by publishing:
 ```bash
-rostopic pub -1 /tum_tb_perception/detector_trigger std_msgs/Bool "data: true"
+ros2 topic pub --once /tum_tb_perception/detector_trigger std_msgs/msg/Bool "{'data': 'true'}"
 ```
 The estimated task board and component poses will be published on the `/tum_tb_perception/object_poses` topic.
 
@@ -170,7 +172,7 @@ The estimated task board and component poses will be published on the `/tum_tb_p
 To estimate the solution for the slider task, position the camera above the LCD screen (see, for example, the perspective shown on the illustrative image of the screen [above](#example-results)).
 Then, trigger the slider distance estimation by publishing:
 ```bash
-rostopic pub -1 /tum_tb_perception/silder_solver_trigger std_msgs/Bool "data: true"
+ros2 topic pub --once /tum_tb_perception/silder_solver_trigger std_msgs/msg/Bool "{'data': 'true'}"
 ```
 
 The estimated slider motion distance will be published on the `/tum_tb_perception/slider_solver_result` topic.
