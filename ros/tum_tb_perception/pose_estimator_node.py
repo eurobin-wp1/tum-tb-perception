@@ -551,7 +551,7 @@ class PoseEstimatorNode(Node):
                         self.get_logger().info(f'Finished in {elapsed_time:.2f}s')
                         self.get_logger().info(f'Continuously publishing current {self.taskboard_frame_name} transform')
                     else:
-                        self.get_logger().info(f'Could not get a pointcloud message from topic {pointcloud_topic}! ' + \
+                        self.get_logger().info(f'Could not get a pointcloud message from topic {self.pointcloud_topic}! ' + \
                                                f'Skipping pose estimation for this detection result...')
 
                     self.current_detection_msg = None
