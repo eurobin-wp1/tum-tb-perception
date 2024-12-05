@@ -69,7 +69,7 @@ class CNNDetectorNode(Node):
         self.declare_parameter('input_image_pub_topic', '/tum_tb_perception/input_images')
         self.declare_parameter('detection_pub_topic', '/tum_tb_perception/detection_result')
         self.declare_parameter('publish_visual_output', True)
-        self.declare_parameter('save_output', False)
+        self.declare_parameter('save_output', True)
         self.declare_parameter('device', 'cpu')
         self.declare_parameter('rate', 10)
         self.declare_parameter('debug', False)

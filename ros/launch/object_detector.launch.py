@@ -95,7 +95,7 @@ def generate_launch_description():
     )
     save_output_launch_arg = DeclareLaunchArgument(
         'save_output', 
-        default_value='False',
+        default_value='True',
         description='TODO'
     )
     device_launch_arg = DeclareLaunchArgument(
