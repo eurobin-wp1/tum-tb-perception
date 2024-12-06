@@ -17,7 +17,10 @@ Designed for and tested on Ubuntu 22.04 LTS, ROS Humble with Python 3.8/3.10, an
 [![Python 3.8](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+<b>Author:</b> [Ahmed Abdelrahman](https://github.com/af-a)
+
 </div>
+
 
 ## Contents
 - [➤ Overview](#overview)
