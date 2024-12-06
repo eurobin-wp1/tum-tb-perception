@@ -1,3 +1,9 @@
+<b>NOTE: I am temporarily not actively maintaining the ROS1 [melodic](https://github.com/eurobin-wp1/tum-tb-perception/tree/melodic) version of this package, so it is currently lagging the main ROS2 Humble version. I will pick this up again as soon as time permits.</b>
+
+-------------------------
+-------------------------
+
+
 <div align="center">
 
 # tum-tb-perception
