@@ -123,6 +123,11 @@ After cloning this repository into your workspace, it is recommended to first in
 pip install -r requirements.txt
 ```
 
+Install the `ros-humble-tf-transformations` package:
+```
+sudo apt install ros-humble-tf-transformations
+```
+
 Before building, also clone the [tum-tb-perception-msgs](https://github.com/eurobin-wp1/tum-tb-perception-msgs) repository, on which this package depends, into the workspace source directory.
 
 ### Build Package
@@ -340,6 +345,7 @@ For ROS:
 * `tf2_geometry_msgs`
 * `tf2_ros`
 * `tf_conversions`
+* `tf_transformations`
 * `visualization_msgs`
 
 ## Future Plans
