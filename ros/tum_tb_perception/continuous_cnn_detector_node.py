@@ -32,7 +32,7 @@ from tum_tb_perception_msgs.msg import BoundingBox, BoundingBoxList
 
 from tum_tb_perception.image_detection import ImageDetector
 
-supported_torch_devices_ = ['cpu', 'gpu']
+supported_torch_devices_ = ['cpu', 'cuda']
 
 ## ----------------------------------------------------------------------
 ## UDP Parameters
