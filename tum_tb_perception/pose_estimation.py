@@ -159,7 +159,7 @@ class PositionEstimator(object):
             if debug:
                 print(f'\n[DEBUG] [{self.name}] Removing outliers from {object_id} points...')
 
-            percentiles = (35, 65) if object_id == 'taskboard' else (25, 75)
+            percentiles = (25, 75)
             filtered_points_array = self.remove_outliers(points_array,
                                                          percentiles=percentiles,
                                                          debug=debug)
