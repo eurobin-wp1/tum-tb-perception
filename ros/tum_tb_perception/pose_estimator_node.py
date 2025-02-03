@@ -489,6 +489,8 @@ class PoseEstimatorNode(Node):
                                       'plot_fitted_rectified_rectangle': True, 
                                       'hide_pc_points': False}
 
+                        self.get_logger().info(f'Estimating detected object orientations...')
+
                         # Run orientation estimation until successful for a maximum of num_retries times.
                         for attempt_id in range(self.num_retries):
                             tb_orientation_estimation_start_time = time.time()
