@@ -239,13 +239,13 @@ class CNNDetectorNode(Node):
                     continue
 
                 detector_result = self.detector.detect_objects(
-                        image_cv, 
+                        cv2.cvtColor(image_cv, cv2.COLOR_BGR2RGB),
                         return_annotated_image=self.publish_visual_output or \
                                                self.save_output
                 )
                 bboxes = detector_result[0]
                 model_inference_time = detector_result[1]
-                detection_image_cv = detector_result[2]
+                detection_image_cv = cv2.cvtColor(detector_result[2], cv2.COLOR_RGB2BGR)
                 self.get_logger().info(f'Model inference time: {model_inference_time:.2f}s')
 
                 # Publish results in a BoundingBoxList message:

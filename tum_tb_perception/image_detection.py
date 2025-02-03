@@ -105,6 +105,6 @@ class ImageDetector(object):
             # Annotate image with BBs:
             annotated_image_cv = annotate_image(image_cv, bboxes, 
                                                 self.class_colors_dict,
-                                                input_encoding='bgr')
+                                                input_encoding='rgb')
 
         return bboxes, model_inference_time, annotated_image_cv 
