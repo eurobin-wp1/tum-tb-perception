@@ -44,6 +44,11 @@ from tum_tb_perception.utils import bbox_list_msg_to_list, obj_list_msg_to_json
 from tum_tb_perception.visualization import load_class_color_map
 from tum_tb_perception.dataset import load_labels
 
+# The following fixes an occasional visualization issue in Ubuntu 22.04
+# if running with the debug flag:
+if 'QT_QPA_PLATFORM_PLUGIN_PATH' in os.environ.keys():
+    os.environ.pop("QT_QPA_PLATFORM_PLUGIN_PATH")
+
 
 ## ----------------------------------------------------------------------
 ## ROS Nodes, Callbacks and Message Initializations:
@@ -483,6 +488,8 @@ class PoseEstimatorNode(Node):
                                       'plot_fitted_rectangle': False, 
                                       'plot_fitted_rectified_rectangle': True, 
                                       'hide_pc_points': False}
+
+                        self.get_logger().info(f'Estimating detected object orientations...')
 
                         # Run orientation estimation until successful for a maximum of num_retries times.
                         for attempt_id in range(self.num_retries):
