@@ -147,14 +147,14 @@ class CNNDetectorNode(Node):
         if self.save_output:
             output_sub_dir_path = 'cnn_detector_output_' + \
                                   datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_dir_path = os.path.join(self.output_dir_path, output_sub_dir_path)
+            self.output_dir_path = os.path.join(self.output_dir_path, output_sub_dir_path)
             self.get_logger().info(f'Saving output data in ' + \
-                                   f'{output_dir_path}')
+                                   f'{self.output_dir_path}')
 
-            if not os.path.isdir(output_dir_path):
+            if not os.path.isdir(self.output_dir_path):
                 self.get_logger().info(f'Output directory does not exist! ' + \
                                        f'Creating now...')
-                os.makedirs(output_dir_path)
+                os.makedirs(self.output_dir_path)
 
         ## ----------------------------------------------------------------------
         ## Detector Initialization:
