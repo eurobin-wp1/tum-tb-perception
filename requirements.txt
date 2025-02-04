@@ -1,4 +1,4 @@
-cv-bridge==1.16.2
+cv-bridge==1.13.0.post0
 matplotlib==3.7.4
 numpy==1.24.4
 opencv_python==4.9.0.80
