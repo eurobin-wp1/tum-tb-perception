@@ -346,7 +346,8 @@ if __name__ == '__main__':
                         tb_orientation_estimation_start_time = time.time()
                         tb_tf_matrix, orientation_estimation_success, \
                                 vertical_side_found, \
-                                horizontal_side_found = position_estimator.estimate_tb_orientation(tb_points_array, 
+                                horizontal_side_found , \
+                                tb_corner_points_list = position_estimator.estimate_tb_orientation(tb_points_array, 
                                                                                                    object_positions_dict, 
                                                                                                    debug=debug,
                                                                                                    output_dir_path=output_dir_path if save_output else None,
