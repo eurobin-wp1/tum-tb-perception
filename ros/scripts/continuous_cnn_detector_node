@@ -224,13 +224,13 @@ if __name__ == '__main__':
                 continue
 
             detector_result = detector.detect_objects(
-                    image_cv, 
+                    cv2.cvtColor(image_cv, cv2.COLOR_BGR2RGB),
                     return_annotated_image=publish_visual_output or \
                                            save_output
             )
             bboxes = detector_result[0]
             model_inference_time = detector_result[1]
-            detection_image_cv = detector_result[2]
+            detection_image_cv = cv2.cvtColor(detector_result[2], cv2.COLOR_RGB2BGR)
             rospy.loginfo(f'[cnn_detector] Model inference time: ' + \
                           f'{model_inference_time:.2f}s')
 
