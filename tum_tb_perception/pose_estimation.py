@@ -146,8 +146,11 @@ class PositionEstimator(object):
         object_points_dict = self.convert_object_points_to_arrays(object_points_dict)
 
         if debug:
-            # Copy unfiltered taskboard data for later visualizations:
-            cropped_pc_points_array = object_points_dict[cropped_pc_label].copy()
+            try:
+                # Copy unfiltered taskboard data for later visualizations:
+                cropped_pc_points_array = object_points_dict[cropped_pc_label].copy()
+            except KeyError:
+                cropped_pc_points_array = None
         else:
             cropped_pc_points_array = None
 
@@ -156,7 +159,7 @@ class PositionEstimator(object):
             if debug:
                 print(f'\n[DEBUG] [{self.name}] Removing outliers from {object_id} points...')
 
-            percentiles = (35, 65) if object_id == 'taskboard' else (25, 75)
+            percentiles = (25, 75)
             filtered_points_array = self.remove_outliers(points_array,
                                                          percentiles=percentiles,
                                                          debug=debug)
@@ -376,6 +379,8 @@ class TaskboardPoseEstimator(PositionEstimator):
             Whether the vertical side(s) of the taskboard could be successfully recognized
         horizontal_side_found: bool
             Whether the vertical side(s) of the taskboard could be successfully recognized
+        tb_corner_points_list: list
+            Taskboard surface 3D corner points (lists)
         """
         vertical_side_found, horizontal_side_found = False, False
 
@@ -509,8 +514,8 @@ class TaskboardPoseEstimator(PositionEstimator):
             print(f'\n[DEBUG] [{self.name}] Orientation vector 1 (unnormalized):\n{orientation_vector_1}')
             print(f'[DEBUG] [{self.name}] Orientation vector 2 (unnormalized):\n{orientation_vector_2}')
 
-        orientation_vectors = np.stack((orientation_vector_1 / np.linalg.norm(orientation_vector_1),
-                                        orientation_vector_2 / np.linalg.norm(orientation_vector_2)))
+        orientation_vectors = np.stack((orientation_vector_2 / np.linalg.norm(orientation_vector_2),
+                                        orientation_vector_1 / np.linalg.norm(orientation_vector_1)))
 
         tb_orientation_matrix = np.vstack((orientation_vectors, plane_normal_eigenvector))
 
@@ -519,7 +524,7 @@ class TaskboardPoseEstimator(PositionEstimator):
             print(f'[INFO] [{self.name}] Estimated orientation vectors are not orthogonal! Orientation matrix:\n {tb_orientation_matrix}', flush=True)
             print(f'[INFO] [{self.name}] Will re-attempt to estimate orientation...', flush=True)
 
-            return None, False, vertical_side_found, horizontal_side_found
+            return None, False, vertical_side_found, horizontal_side_found, None
 
         # Re-orient axes for desired convention:
         reorientation_matrix = np.array([[0, 1, 0], [1, 0, 0], [0, 0, -1]])
@@ -536,6 +541,9 @@ class TaskboardPoseEstimator(PositionEstimator):
             print(f'[DEBUG] [{self.name}] Taskboard surface tb_position position:\n{tb_position}')
 
         orientation_estimation_success = True if vertical_side_found and horizontal_side_found else False
+
+        # Return TB corner pointss for RViz visualization:
+        tb_corner_points_list = np.vstack((rect_corners, rect_corners[0, :]))
 
         ## ----------------------------------------
         ## Visualizing Results:
@@ -586,9 +594,7 @@ class TaskboardPoseEstimator(PositionEstimator):
                           ha='left', va='bottom')
 
             ax.set_xlabel('$x$'), ax.set_ylabel('$y$'), ax.set_zlabel('$z$')
-            ax.set_xlim(np.array(xlims) * 1.0)
-            ax.set_ylim(np.array(ylims) * 1.0)
-            ax.set_zlim(np.array(zlims) * 1.0)
+            ax.set_xlim(np.array(xlims) * 1.0), ax.set_ylim(np.array(ylims) * 1.0), ax.set_zlim(np.array(zlims) * 1.0)
             ax.view_init(-177, -87)
             ax.set_title('Best-fit Plane Normal Vector', y=0.98, fontsize=20)
             fig.tight_layout()
@@ -742,5 +748,5 @@ class TaskboardPoseEstimator(PositionEstimator):
 
             plt.show()
     
-        return tb_tf_matrix, orientation_estimation_success, vertical_side_found, horizontal_side_found
+        return tb_tf_matrix, orientation_estimation_success, vertical_side_found, horizontal_side_found, tb_corner_points_list
 
