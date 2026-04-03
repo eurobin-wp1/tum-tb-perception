@@ -31,7 +31,8 @@ RUN apt-get update -y && apt-get install -y --allow-unauthenticated \
     && rm -rf /var/lib/apt/lists/*
 
 RUN mkdir -p /home/$USERNAME/workspace/catkin_ws/src
-RUN git clone https://github.com/eurobin-wp1/tum-tb-perception.git --branch noetic /home/$USERNAME/workspace/catkin_ws/src/tum-tb-perception
+## TODO: Test:
+RUN git clone https://github.com/eurobin-wp1/tum-tb-perception.git --branch feature/docker-tests-noetic /home/$USERNAME/workspace/catkin_ws/src/tum-tb-perception
 RUN . /opt/ros/noetic/setup.sh && cd /home/$USERNAME/workspace/catkin_ws && catkin build
 
 RUN chown -R $USER_UID:$USER_GID /home/$USERNAME/workspace
