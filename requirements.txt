@@ -1,12 +1,17 @@
-cv-bridge==1.13.0.post0
-matplotlib==3.7.4
-numpy==1.24.4
-opencv_python==4.9.0.80
-pandas==2.0.3
-PyYAML==5.3.1
-scikit-learn==1.3.2
-scipy==1.10.1
-setuptools==69.0.3
-torch==2.1.0
-torchvision==0.16.0
-transforms3d==0.4.2
+# Install with: pip install -r requirements.txt
+# Note: cv_bridge is provided by the ROS system package (ros-jazzy-cv-bridge).
+#       Do NOT install it via pip.
+matplotlib>=3.7.4
+numpy>=1.26.0
+opencv_python>=4.9.0.80
+pandas>=2.0.3
+PyYAML>=5.3.1
+scikit-learn>=1.3.2
+scipy>=1.11.0
+setuptools>=69.0.3
+# torch 2.2+ is required for Python 3.12 support (Jazzy / Ubuntu 24.04).
+# For GPU support replace with the appropriate CUDA wheel:
+#   pip install torch>=2.2.0 torchvision>=0.17.0 --index-url https://download.pytorch.org/whl/cu121
+torch>=2.2.0
+torchvision>=0.17.0
+transforms3d>=0.4.2

@@ -1,4 +1,4 @@
-<b>NOTE: I am temporarily not actively maintaining the ROS1 [melodic](https://github.com/eurobin-wp1/tum-tb-perception/tree/melodic) version of this package, so it is currently lagging the main ROS2 Humble version. I will pick this up again as soon as time permits.</b>
+<b>NOTE: I am temporarily not actively maintaining the ROS1 [melodic](https://github.com/eurobin-wp1/tum-tb-perception/tree/melodic) version of this package, so it is currently lagging the main ROS2 version. I will pick this up again as soon as time permits.</b>
 
 -------------------------
 -------------------------
@@ -10,11 +10,11 @@
 
 A ROS package that contains the core perception libraries and tools for the euROBIN task board challenge.
 
-Designed for and tested on Ubuntu 22.04 LTS, ROS Humble with Python 3.8/3.10, and an Intel Realsense D435i.
+Designed for and tested on Ubuntu 24.04 LTS, ROS Jazzy with Python 3.12, and an Intel Realsense D435i. Also compatible with Ubuntu 22.04 LTS / ROS Humble (Python 3.10).
 
 <b>Note: The package is in an initial development phase. It is unstable and may significantly change in concept and implementation.</b>
   
-[![Python 3.8](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/release/python-380/)
+[![Python 3.10](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/release/python-3100/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <b>Author:</b> [Ahmed Abdelrahman](https://github.com/af-a)
@@ -123,9 +123,16 @@ After cloning this repository into your workspace, it is recommended to first in
 pip install -r requirements.txt
 ```
 
-Install the `ros-humble-tf-transformations` package:
+> **Note:** `cv_bridge` is installed as a ROS system package and must **not** be installed via pip.
+
+Install the `tf-transformations` ROS package (replace `jazzy` with `humble` if on ROS Humble):
 ```
-sudo apt install ros-humble-tf-transformations
+sudo apt install ros-jazzy-tf-transformations
+```
+
+For GPU-accelerated detection, install PyTorch with CUDA support instead of the CPU-only version in `requirements.txt`:
+```
+pip install torch>=2.2.0 torchvision>=0.17.0 --index-url https://download.pytorch.org/whl/cu121
 ```
 
 Before building, also clone the [tum-tb-perception-msgs](https://github.com/eurobin-wp1/tum-tb-perception-msgs) repository, on which this package depends, into the workspace source directory.
@@ -325,20 +332,21 @@ tum-tb-perception
 
 ## Dependencies
 
-* `cv2`
-* `cv_bridge`
+Python (via pip, see `requirements.txt`):
+
+* `cv2` (opencv-python)
 * `matplotlib`
-* `numpy`
+* `numpy >= 1.26`
 * `pandas`
-* `rospy`
-* `rospkg`
 * `scipy`
 * `scikit-learn`
-* `torch`
-* `torchvision`
+* `torch >= 2.2.0` (Python 3.12 / Jazzy requires ≥ 2.2.0)
+* `torchvision >= 0.17.0`
+* `transforms3d`
 
-For ROS:
+ROS system packages:
 
+* `cv_bridge` (`ros-jazzy-cv-bridge`)
 * `geometry_msgs`
 * `std_msgs`
 * `sensor_msgs`
